@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>隐私说明 — KILLA</title>
+    <style>
+      :root { color-scheme: dark; }
+      body { margin: 0; padding: 48px 20px; background: #0b0e14; color: #dbe3ef;
+        font: 15px/1.8 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+      main { max-width: 760px; margin: 0 auto; }
+      h1 { font-size: 26px; letter-spacing: .12em; color: #4cc9f0; }
+      h2 { font-size: 16px; margin-top: 32px; color: #e6edf7; }
+      p, li { color: #a9b6c9; }
+      a { color: #4cc9f0; }
+      .muted { color: #6f7f95; font-size: 12px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <!-- 上线前请补充运营主体、联系方式，并做一次合规审查 -->
+      <h1>隐私说明</h1>
+      <p class="muted">最后更新：2026-10-24 · 适用于 KILLA 网页版</p>
+
+      <p>KILLA 是一个 4v4 网页射击游戏。我们尽量少收集数据：当前版本没有账号体系，
+        不使用 Cookie，也不接入第三方统计或广告 SDK。</p>
+
+      <h2>我们处理哪些数据</h2>
+      <ul>
+        <li><strong>游客标识与昵称</strong>：进入对局时由浏览器随机生成，仅保存在服务器内存中，用于区分玩家。</li>
+        <li><strong>对局数据</strong>：位置、朝向、射击、血量、比分等，仅用于实时对战，服务器重启即清除。</li>
+        <li><strong>日志</strong>：服务器会记录连接时间、昵称、房间、对局开始/结束等运行日志，用于排障与防滥用。</li>
+        <li><strong>网络信息</strong>：HTTP/WebSocket 请求会携带 IP 地址，由服务器与反向代理处理，用于建立连接与安全防护。</li>
+        <li><strong>本机设置</strong>：鼠标灵敏度、音量与配装选择保存在浏览器 localStorage，仅用于界面体验，不上传服务器；清除站点数据即可删除。</li>
+      </ul>
+
+      <h2>我们不做什么</h2>
+      <ul>
+        <li>不采集麦克风、摄像头或通讯录。</li>
+        <li>不读取设备上的其他文件。</li>
+        <li>不向第三方出售或共享对局数据。</li>
+        <li>音效由浏览器本地合成，不上传音频。</li>
+      </ul>
+
+      <h2>数据保存与删除</h2>
+      <p>对局数据只存在于服务器内存；页面关闭后游客标识失效。服务器日志按运维策略轮转删除。
+        如需删除日志中的相关信息，请联系运营者。</p>
+
+      <h2>未成年人</h2>
+      <p>本游戏包含射击与对抗内容，建议 16 岁以上玩家游玩；未成年人应在监护人指导下使用。
+        我们不会主动收集未成年人的身份信息。</p>
+
+      <h2>变更</h2>
+      <p>隐私说明可能随功能调整而更新，更新后会发布在本页面。</p>
+
+      <p class="muted"><a href="/">返回游戏</a> · <a href="/terms.html">用户协议</a></p>
+    </main>
+  </body>
+</html>

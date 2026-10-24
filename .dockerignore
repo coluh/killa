@@ -1,0 +1,9 @@
+.git
+.gitignore
+.cache
+.env
+client/node_modules
+client/dist
+server/killa
+docs
+*.log

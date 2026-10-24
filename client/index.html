@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="KILLA — 4v4 网页团队竞技射击：仓库图、40 杀 / 10 分钟、机器人补位" />
+    <meta name="theme-color" content="#0b0e14" />
+    <meta property="og:title" content="KILLA — 4v4 团队竞技" />
+    <meta property="og:description" content="4v4 网页射击：仓库图、40 杀 / 10 分钟、几何线框风格" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/og.png" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <title>KILLA — 4v4 团队竞技</title>
+  </head>
+  <body>
+    <div id="app"></div>
+
+    <div id="crosshair"></div>
+
+    <div id="hud">
+      <div class="hud-top">
+        <div class="brand">KILLA</div>
+        <div class="mode">团队竞技 · 仓库</div>
+        <div class="score" aria-label="比分">
+          <span class="team-a" id="scoreA">0</span>
+          <span class="dots">:</span>
+          <span class="team-b" id="scoreB">0</span>
+        </div>
+        <div class="timer" id="timer">等待玩家</div>
+        <div class="meta">
+          <span id="players">0/8</span>
+          <span id="ping">— ms</span>
+        </div>
+      </div>
+      <div id="vitals">
+        <div class="vrow">
+          <span class="vlabel">HP</span>
+          <div class="hp-track"><div id="hpfill"></div></div>
+          <span id="hpnum">100</span>
+        </div>
+        <div class="vrow">
+          <span class="vlabel">甲</span>
+          <div class="armor-track"><div id="vestfill"></div></div>
+          <span id="vestnum">100</span>
+        </div>
+        <div class="vrow">
+          <span class="vlabel">盔</span>
+          <div class="armor-track"><div id="helmetfill"></div></div>
+          <span id="helmetnum">100</span>
+        </div>
+      </div>
+
+      <div id="weapon">
+        <div id="weaponname" class="wname">M416</div>
+        <div class="wammo"><span id="ammo">30</span><span class="wsep">/</span><span id="mag">30</span></div>
+        <div id="reloadhint" class="reloadhint hidden">换弹中…</div>
+      </div>
+      <div id="killfeed"></div>
+      <div id="countdown" class="hidden"></div>
+      <div class="hud-bottom">
+        WASD 移动 · Shift 疾跑 · Space 跳跃 · 左键开火 · R 换弹 · B 配装 · Esc 释放鼠标
+      </div>
+    </div>
+
+    <div id="hurt"></div>
+
+    <div id="loadout" class="hidden">
+      <div class="loadout-panel">
+        <p class="kicker">配装</p>
+        <h2>选择主武器</h2>
+        <p class="sub">下次复活生效</p>
+        <div id="loadoutcards" class="cards"></div>
+        <p class="hint">按 B 或 Esc 关闭</p>
+      </div>
+    </div>
+
+    <div id="result" class="hidden">
+      <div class="result-card">
+        <p class="result-kicker">对局结束</p>
+        <h2 id="resulttitle"></h2>
+        <p id="resultscore" class="result-score"></p>
+        <p id="resultnext" class="result-next"></p>
+      </div>
+    </div>
+
+    <div id="scoreboard" class="hidden">
+      <div class="board">
+        <div class="board-title">KILLA · 团队竞技</div>
+        <div class="board-teams">
+          <div class="team-col">
+            <h3 class="blue">蓝队 <span id="boardA">0</span></h3>
+            <div id="teamA" class="rows"></div>
+          </div>
+          <div class="team-col">
+            <h3 class="orange">橙队 <span id="boardB">0</span></h3>
+            <div id="teamB" class="rows"></div>
+          </div>
+        </div>
+        <p class="board-hint">按住 Tab 查看 · 40 杀或 10 分钟结束</p>
+      </div>
+    </div>
+
+    <div id="death" class="hidden">
+      <div class="death-card">
+        <h2>阵亡</h2>
+        <p id="deathby"></p>
+        <p id="respawnin" class="countdown">3.0s 后复活</p>
+      </div>
+    </div>
+
+    <div id="overlay">
+      <div class="panel">
+        <h1>KILLA</h1>
+        <p class="sub">4v4 团队竞技 · 先到 40 杀</p>
+        <p id="status" class="status">正在连接服务器…</p>
+        <button id="play" disabled>进入战场</button>
+        <ul class="controls">
+          <li><kbd>W A S D</kbd> 移动</li>
+          <li><kbd>左键</kbd> 开火</li>
+          <li><kbd>Shift</kbd> 疾跑</li>
+          <li><kbd>R</kbd> 换弹</li>
+          <li><kbd>Space</kbd> 跳跃</li>
+          <li><kbd>B</kbd> 配装</li>
+          <li><kbd>鼠标</kbd> 视角</li>
+          <li><kbd>Esc</kbd> 释放鼠标</li>
+        </ul>
+        <div class="settings">
+          <label>
+            <span>鼠标灵敏度</span>
+            <input id="sens" type="range" min="0.4" max="2.2" step="0.05" value="1" />
+            <output id="sensval">1.00</output>
+          </label>
+          <label>
+            <span>音量</span>
+            <input id="vol" type="range" min="0" max="1" step="0.05" value="0.8" />
+            <output id="volval">80%</output>
+          </label>
+        </div>
+        <p class="note">4v4 · 仓库图 · 先到 40 杀 / 10 分钟 · 机器人补位</p>
+        <p class="legal">
+          <a href="/privacy.html" target="_blank" rel="noopener">隐私说明</a>
+          <span>·</span>
+          <a href="/terms.html" target="_blank" rel="noopener">用户协议</a>
+          <span>·</span>
+          <span>建议 16+</span>
+        </p>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

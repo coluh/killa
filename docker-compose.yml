@@ -1,0 +1,54 @@
+name: killa
+
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    environment:
+      KILLA_ALLOWED_ORIGINS: ${KILLA_ORIGINS:-}
+    command:
+      - "-addr"
+      - ":8080"
+      - "-static"
+      - "/app/client/dist"
+      - "-rooms"
+      - "${KILLA_ROOMS:-16}"
+    expose:
+      - "8080"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      KILLA_DOMAIN: ${KILLA_DOMAIN:?set KILLA_DOMAIN in .env}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  caddy_data:
+  caddy_config:

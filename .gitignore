@@ -1,0 +1,17 @@
+# 依赖与构建产物
+node_modules/
+client/dist/
+client/.vite/
+server/killa
+server/bin/
+*.log
+.DS_Store
+
+# 本地缓存（沙箱内构建时使用）
+.cache/
+.home/
+.pnpm-store/
+
+# 本地环境
+.env
+.env.local
