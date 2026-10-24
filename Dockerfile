@@ -12,6 +12,8 @@ RUN npm run build
 FROM golang:1.24-alpine AS server
 WORKDIR /src/server
 COPY server/go.mod server/go.sum ./
+ENV GOPROXY=https://goproxy.cn,direct
+ENV GOSUMDB=sum.golang.google.cn
 RUN go mod download
 COPY server/ ./
 RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/killa ./cmd/killa
