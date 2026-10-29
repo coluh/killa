@@ -564,9 +564,14 @@ net.onShot = (shot: Shot) => {
   if (shot.shooter === selfId) {
     sound.shoot(myWeapon?.id === 'smg', 0.9)
   } else {
-    const distance = Math.hypot(shot.x - local.x, shot.z - local.z)
-    if (distance < 45) {
-      sound.shoot(false, Math.max(0.08, (1 - distance / 45) * 0.5))
+    const dx = shot.x - local.x
+    const dz = shot.z - local.z
+    const distance = Math.hypot(dx, dz)
+    if (distance < 45 && distance > 0.01) {
+      const rightX = Math.cos(local.yaw)
+      const rightZ = -Math.sin(local.yaw)
+      const pan = (dx * rightX + dz * rightZ) / distance
+      sound.shoot(false, Math.max(0.08, (1 - distance / 45) * 0.5), pan)
     }
   }
   sceneView.addImpact(shot.endX, shot.endY, shot.endZ, Boolean(shot.hit))
