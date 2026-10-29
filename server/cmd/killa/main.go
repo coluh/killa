@@ -26,12 +26,17 @@ func main() {
 	scoreLimit := flag.Int("score-limit", 40, "kills required to win")
 	bots := flag.Bool("bots", true, "fill empty slots with bots")
 	maxRooms := flag.Int("rooms", 16, "maximum concurrent rooms")
+	mapName := flag.String("map", "reference", "map: reference (imported blockout) or classic")
 	flag.Parse()
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	manager := game.NewManager(ctx, game.NewWarehouse(), *maxRooms)
+	world := game.NewWarehouseReference()
+	if *mapName == "classic" {
+		world = game.NewWarehouse()
+	}
+	manager := game.NewManager(ctx, world, *maxRooms)
 	manager.SetRules(time.Duration(*matchSeconds)*time.Second, *scoreLimit)
 	manager.SetAutoBots(*bots)
 
@@ -72,7 +77,7 @@ func main() {
 		_ = srv.Shutdown(shutdownCtx)
 	}()
 
-	log.Printf("killa: listening on %s (static=%q, rooms=%d)", *addr, *staticDir, *maxRooms)
+	log.Printf("killa: listening on %s (static=%q, rooms=%d, map=%s)", *addr, *staticDir, *maxRooms, *mapName)
 	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Fatal(err)
 	}

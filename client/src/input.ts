@@ -35,7 +35,10 @@ export class Input {
     document.addEventListener('mousedown', (event) => {
       if (!this.locked) return
       if (event.button === 0) this.fire = true
-      if (event.button === 2) this.ads = true
+      if (event.button === 2) {
+        event.preventDefault()
+        this.ads = true
+      }
     })
 
     document.addEventListener('mouseup', (event) => {

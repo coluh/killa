@@ -18,6 +18,14 @@ interface Tracer {
   maxLife: number
 }
 
+interface Impact {
+  meshes: THREE.Mesh[]
+  velocities: THREE.Vector3[]
+  material: THREE.MeshBasicMaterial
+  life: number
+  maxLife: number
+}
+
 function shortestAngle(from: number, to: number): number {
   const twoPi = Math.PI * 2
   let delta = (to - from) % twoPi
@@ -84,6 +92,8 @@ export class SceneView {
   private readonly renderer: THREE.WebGLRenderer
   private readonly remotes = new Map<string, Remote>()
   private readonly tracers: Tracer[] = []
+  private readonly impacts: Impact[] = []
+  private readonly impactGeometry = new THREE.BoxGeometry(0.1, 0.1, 0.1)
   private readonly handleResize = (): void => this.resize()
   private viewmodel: THREE.Group | null = null
 
@@ -265,6 +275,34 @@ export class SceneView {
       .add(this.camera.position)
   }
 
+  addImpact(x: number, y: number, z: number, onPlayer: boolean): void {
+    const color = onPlayer ? 0xff4d4d : 0x8fe8ff
+    const material = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.95 })
+    const meshes: THREE.Mesh[] = []
+    const velocities: THREE.Vector3[] = []
+
+    for (let i = 0; i < 9; i++) {
+      const mesh = new THREE.Mesh(this.impactGeometry, material)
+      mesh.position.set(
+        x + (Math.random() - 0.5) * 0.18,
+        y + (Math.random() - 0.5) * 0.18,
+        z + (Math.random() - 0.5) * 0.18,
+      )
+      mesh.scale.setScalar(0.6 + Math.random() * 0.9)
+      this.scene.add(mesh)
+      meshes.push(mesh)
+      velocities.push(
+        new THREE.Vector3(
+          (Math.random() - 0.5) * 3.2,
+          Math.random() * 2.4,
+          (Math.random() - 0.5) * 3.2,
+        ),
+      )
+    }
+
+    this.impacts.push({ meshes, velocities, material, life: 0.46, maxLife: 0.46 })
+  }
+
   addTracer(shot: Shot, own: boolean): void {
     const from = new THREE.Vector3(shot.x, shot.y, shot.z)
     const to = new THREE.Vector3(shot.endX, shot.endY, shot.endZ)
@@ -368,6 +406,30 @@ export class SceneView {
       remote.yaw += shortestAngle(remote.yaw, remote.targetYaw) * smoothing
       remote.group.position.copy(remote.pos)
       remote.group.rotation.y = remote.yaw
+
+      // Avoid a body filling the whole screen when someone overlaps the camera.
+      const dx = remote.pos.x - this.camera.position.x
+      const dy = remote.pos.y + 1 - this.camera.position.y
+      const dz = remote.pos.z - this.camera.position.z
+      remote.group.visible = remote.alive && dx * dx + dy * dy + dz * dz > 0.5
+    }
+
+    for (let i = this.impacts.length - 1; i >= 0; i--) {
+      const impact = this.impacts[i]
+      impact.life -= dt
+      if (impact.life <= 0) {
+        for (const mesh of impact.meshes) {
+          this.scene.remove(mesh)
+        }
+        impact.material.dispose()
+        this.impacts.splice(i, 1)
+        continue
+      }
+      impact.material.opacity = Math.max(0, impact.life / impact.maxLife)
+      for (let j = 0; j < impact.meshes.length; j++) {
+        impact.velocities[j].y -= 9 * dt
+        impact.meshes[j].position.addScaledVector(impact.velocities[j], dt)
+      }
     }
 
     for (let i = this.tracers.length - 1; i >= 0; i--) {

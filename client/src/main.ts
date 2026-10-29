@@ -19,6 +19,7 @@ const deathBy = document.getElementById('deathby') as HTMLParagraphElement
 const respawnEl = document.getElementById('respawnin') as HTMLParagraphElement
 const killFeed = document.getElementById('killfeed') as HTMLDivElement
 const crosshair = document.getElementById('crosshair') as HTMLDivElement
+const adsScope = document.getElementById('ads-scope') as HTMLDivElement
 const scoreAEl = document.getElementById('bigA') as HTMLSpanElement
 const scoreBEl = document.getElementById('bigB') as HTMLSpanElement
 const timerEl = document.getElementById('bigtimer') as HTMLDivElement
@@ -504,6 +505,7 @@ net.onSnapshot = (snap: Snapshot) => {
   if (!me.alive) {
     alive = false
     input.fire = false
+    input.ads = false
     showDeath('')
     respawnEl.textContent = `${Math.max(0, me.respawnIn).toFixed(1)}s 后复活`
     return
@@ -567,6 +569,7 @@ net.onShot = (shot: Shot) => {
       sound.shoot(false, Math.max(0.08, (1 - distance / 45) * 0.5))
     }
   }
+  sceneView.addImpact(shot.endX, shot.endY, shot.endZ, Boolean(shot.hit))
   if (shot.hit && shot.shooter === selfId) {
     flashHitmarker()
     sound.hit()
@@ -580,6 +583,7 @@ net.onKill = (kill: Kill) => {
     sound.death()
     alive = false
     input.fire = false
+    input.ads = false
     showDeath(`被 ${kill.killerName} 击杀`)
     respawnEl.textContent = '3.0s 后复活'
   }
@@ -730,6 +734,7 @@ function frame(now: number): void {
     sceneView.update(dt, local, latestPlayers, selfId, input.ads, input.sprint && input.forward() > 0)
   }
   crosshair.classList.toggle('ads', input.ads)
+  adsScope.classList.toggle('hidden', !input.ads)
 }
 
 if (new URLSearchParams(location.search).has('debug')) {

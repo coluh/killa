@@ -898,3 +898,45 @@ body {
   transform: translate(-50%, -50%) scale(0.45);
   opacity: 0.55;
 }
+
+#ads-scope {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+}
+
+#ads-scope.hidden {
+  display: none;
+}
+
+.scope-ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(50vh, 50vw);
+  height: min(50vh, 50vw);
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 2px solid rgba(120, 220, 255, 0.35);
+  box-shadow:
+    0 0 0 9999px rgba(0, 0, 0, 0.55),
+    inset 0 0 60px rgba(0, 0, 0, 0.45);
+}
+
+.scope-dot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  margin: -3px 0 0 -3px;
+  border-radius: 50%;
+  background: #ff3b30;
+  box-shadow: 0 0 8px rgba(255, 60, 50, 0.95);
+}
+
+#crosshair.ads {
+  transform: translate(-50%, -50%) scale(0.45);
+  opacity: 0;
+}

@@ -39,6 +39,7 @@ chmod 600 .env
 
 `KILLA_ORIGINS` 同域部署可留空；如果页面与游戏服务器不同域，填页面完整 Origin，
 逗号分隔。`KILLA_ROOMS` 控制并发房间数（默认 16，即 128 个座位；每房 4v4）。
+如需回退旧仓库图，可在 compose 的 `command` 里加 `-map classic`。
 
 ## 3. 构建并启动
 

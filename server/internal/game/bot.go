@@ -254,7 +254,12 @@ func (r *Room) updateBot(p *Player, now time.Time, dt float64) {
 	if los && dist <= 24 {
 		yaw, pitch := aimAngles(p.State.X, eyeY, p.State.Z, aimX, aimY, aimZ)
 		r.turnBot(p, b, yaw, pitch, dt)
-		r.botStrafe(p, b, now, dt, aimX, aimZ)
+		if dist < 3.5 {
+			// Keep some distance instead of standing inside the target.
+			r.moveBot(p, p.State.X-aimX, p.State.Z-aimZ, WalkSpeed, dt)
+		} else {
+			r.botStrafe(p, b, now, dt, aimX, aimZ)
+		}
 
 		aligned := math.Abs(shortestAngle(p.State.Yaw, yaw)) < 0.045 &&
 			math.Abs(p.State.Pitch-pitch) < 0.04
@@ -330,6 +335,21 @@ func (r *Room) botMoveTo(p *Player, b *botBrain, now time.Time, dt, goalX, goalZ
 }
 
 func (r *Room) moveBot(p *Player, dx, dz, speed, dt float64) {
+	// Separation from other players so bots do not stand inside someone.
+	for _, q := range r.players {
+		if q.ID == p.ID || !q.Alive {
+			continue
+		}
+		ox := p.State.X - q.State.X
+		oz := p.State.Z - q.State.Z
+		dist := math.Hypot(ox, oz)
+		if dist > 1e-4 && dist < 1.2 {
+			push := (1.2 - dist) * 0.9
+			dx += ox / dist * push
+			dz += oz / dist * push
+		}
+	}
+
 	mag := math.Hypot(dx, dz)
 	if mag < 1e-6 {
 		return
