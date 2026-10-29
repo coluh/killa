@@ -349,3 +349,32 @@ func TestRegenAfterDelay(t *testing.T) {
 		t.Fatalf("hp = %d, want 41", p1.HP)
 	}
 }
+
+func TestInvincibleAfterMatchEnd(t *testing.T) {
+	room, p1, p2 := newCombatRoom()
+	now := time.Now()
+	room.finishMatch(now)
+
+	for i := 0; i < 3; i++ {
+		room.applyShot(p1, 0, 0, now.Add(time.Duration(i)*200*time.Millisecond))
+	}
+	if p2.HP != MaxHealth || !p2.Alive || p1.Kills != 0 {
+		t.Fatalf("damage during result screen: hp=%d alive=%v kills=%d", p2.HP, p2.Alive, p1.Kills)
+	}
+
+	// Enter the next countdown: still invincible until the next match starts.
+	room.updateMatch(now.Add(ResultDuration + time.Millisecond))
+	if room.matchState != MatchCountdown {
+		t.Fatalf("state = %q, want countdown", room.matchState)
+	}
+	room.applyShot(p1, 0, 0, now.Add(ResultDuration+time.Second))
+	if p2.HP != MaxHealth {
+		t.Fatalf("damage during countdown: hp = %d", p2.HP)
+	}
+
+	room.beginMatch(now)
+	room.applyShot(p1, 0, 0, now.Add(2*time.Second))
+	if p2.HP == MaxHealth {
+		t.Fatal("damage should work again after the new match starts")
+	}
+}

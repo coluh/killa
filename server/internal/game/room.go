@@ -87,6 +87,7 @@ type Room struct {
 
 	matchDuration time.Duration
 	scoreLimit    int
+	invincible    bool
 
 	humans atomic.Int32
 	total  atomic.Int32

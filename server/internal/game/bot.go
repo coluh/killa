@@ -215,6 +215,9 @@ func (r *Room) updateBots(now time.Time, dt float64) {
 }
 
 func (r *Room) updateBot(p *Player, now time.Time, dt float64) {
+	if r.invincible {
+		return
+	}
 	b := p.Brain
 
 	if now.After(b.nextThink) {

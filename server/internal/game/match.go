@@ -80,6 +80,7 @@ func (r *Room) canStartMatch() bool {
 }
 
 func (r *Room) beginMatch(now time.Time) {
+	r.invincible = false
 	log.Printf("killa: %s match starting (%d players, %v)", r.ID, len(r.players), r.matchDuration)
 	r.matchState = MatchLive
 	r.matchEndsAt = now.Add(r.matchDuration)
@@ -89,6 +90,7 @@ func (r *Room) beginMatch(now time.Time) {
 }
 
 func (r *Room) finishMatch(now time.Time) {
+	r.invincible = true
 	log.Printf("killa: %s match ended %d:%d", r.ID, r.score[0], r.score[1])
 	r.matchState = MatchEnded
 	r.stateEndsAt = now.Add(ResultDuration)
@@ -103,6 +105,7 @@ func (r *Room) finishMatch(now time.Time) {
 }
 
 func (r *Room) abortMatch() {
+	r.invincible = false
 	r.matchState = MatchWaiting
 	r.stateEndsAt = time.Time{}
 	r.score = [2]int{}

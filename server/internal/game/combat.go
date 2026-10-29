@@ -163,7 +163,7 @@ func (r *Room) applyShot(p *Player, yaw, pitch float64, now time.Time) {
 
 	hitID := ""
 	endT := bestT
-	if best != nil && !now.Before(best.ProtectedUntil) {
+	if best != nil && !now.Before(best.ProtectedUntil) && r.damageEnabled() {
 		hitID = best.ID
 		damage := weapon.Damage
 		if headshot {
@@ -194,6 +194,11 @@ func (r *Room) applyShot(p *Player, yaw, pitch float64, now time.Time) {
 		Hit:      hitID,
 		Headshot: hitID != "" && headshot,
 	})
+}
+
+// damageEnabled is false after a match ends until the next one goes live.
+func (r *Room) damageEnabled() bool {
+	return !r.invincible
 }
 
 // applyArmor soaks part of the damage with the vest or helmet.
