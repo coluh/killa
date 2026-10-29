@@ -772,3 +772,129 @@ body {
   color: var(--text);
   text-align: right;
 }
+
+#matchcenter {
+  position: fixed;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  text-align: center;
+  pointer-events: none;
+}
+
+.mc-score {
+  font-size: 30px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-shadow: 0 0 18px rgba(0, 0, 0, 0.65);
+}
+
+.mc-a {
+  color: var(--cyan);
+}
+
+.mc-b {
+  color: var(--orange);
+}
+
+.mc-colon {
+  margin: 0 8px;
+  color: var(--muted);
+  font-size: 22px;
+}
+
+.mc-timer {
+  margin-top: 4px;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.meta {
+  margin-left: auto;
+}
+
+#personal {
+  position: fixed;
+  left: 22px;
+  bottom: 126px;
+  display: flex;
+  gap: 14px;
+  font-size: 13px;
+  color: var(--muted);
+  pointer-events: none;
+  font-variant-numeric: tabular-nums;
+}
+
+#personal b {
+  color: var(--text);
+  font-weight: 700;
+}
+
+#teamlist {
+  position: fixed;
+  left: 22px;
+  top: 96px;
+  width: 190px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  pointer-events: none;
+  font-size: 11px;
+}
+
+.mate {
+  display: grid;
+  grid-template-columns: 1fr 70px 26px;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  background: rgba(8, 12, 18, 0.45);
+  border-left: 2px solid var(--cyan);
+}
+
+.mate.dead {
+  opacity: 0.45;
+  border-left-color: var(--muted);
+}
+
+.mate-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+}
+
+.mate-track {
+  height: 4px;
+  background: rgba(139, 152, 173, 0.2);
+}
+
+.mate-fill {
+  height: 100%;
+  background: var(--cyan);
+  transition: width 0.12s linear;
+}
+
+.mate.dead .mate-fill {
+  background: var(--muted);
+}
+
+.mate-hp {
+  text-align: right;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.row {
+  grid-template-columns: 1fr 26px 26px 26px;
+}
+
+#crosshair.ads {
+  transform: translate(-50%, -50%) scale(0.45);
+  opacity: 0.55;
+}

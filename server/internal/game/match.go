@@ -123,6 +123,8 @@ func (r *Room) resetPlayersForMatch(now time.Time) {
 		p.ProtectedUntil = now.Add(SpawnProtectionTime)
 		p.History = p.History[:0]
 		p.LastShot = time.Time{}
+		p.Damagers = nil
+		p.Assists = 0
 		r.equip(p)
 		if p.Brain != nil {
 			p.Brain.targetID = ""

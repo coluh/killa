@@ -18,20 +18,27 @@
     <div id="crosshair"></div>
 
     <div id="hud">
+      <div id="matchcenter">
+        <div class="mc-score"><span id="bigA" class="mc-a">0</span><span class="mc-colon">:</span><span id="bigB" class="mc-b">0</span></div>
+        <div id="bigtimer" class="mc-timer">等待玩家</div>
+      </div>
+
       <div class="hud-top">
         <div class="brand">KILLA</div>
         <div class="mode">团队竞技 · 仓库</div>
-        <div class="score" aria-label="比分">
-          <span class="team-a" id="scoreA">0</span>
-          <span class="dots">:</span>
-          <span class="team-b" id="scoreB">0</span>
-        </div>
-        <div class="timer" id="timer">等待玩家</div>
         <div class="meta">
           <span id="players">0/8</span>
           <span id="ping">— ms</span>
         </div>
       </div>
+      <div id="teamlist"></div>
+
+      <div id="personal">
+        <span>K <b id="kills">0</b></span>
+        <span>D <b id="deaths">0</b></span>
+        <span>A <b id="assists">0</b></span>
+      </div>
+
       <div id="vitals">
         <div class="vrow">
           <span class="vlabel">HP</span>
@@ -58,7 +65,7 @@
       <div id="killfeed"></div>
       <div id="countdown" class="hidden"></div>
       <div class="hud-bottom">
-        WASD 移动 · Shift 疾跑 · Space 跳跃 · 左键开火 · R 换弹 · B 配装 · Esc 释放鼠标
+        WASD 移动 · Shift 疾跑 · Space 跳跃 · 左键开火 · 右键开镜 · R 换弹 · B 配装 · Esc 释放鼠标
       </div>
     </div>
 

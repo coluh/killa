@@ -19,9 +19,13 @@ const deathBy = document.getElementById('deathby') as HTMLParagraphElement
 const respawnEl = document.getElementById('respawnin') as HTMLParagraphElement
 const killFeed = document.getElementById('killfeed') as HTMLDivElement
 const crosshair = document.getElementById('crosshair') as HTMLDivElement
-const scoreAEl = document.getElementById('scoreA') as HTMLSpanElement
-const scoreBEl = document.getElementById('scoreB') as HTMLSpanElement
-const timerEl = document.getElementById('timer') as HTMLDivElement
+const scoreAEl = document.getElementById('bigA') as HTMLSpanElement
+const scoreBEl = document.getElementById('bigB') as HTMLSpanElement
+const timerEl = document.getElementById('bigtimer') as HTMLDivElement
+const killsEl = document.getElementById('kills') as HTMLElement
+const deathsEl = document.getElementById('deaths') as HTMLElement
+const assistsEl = document.getElementById('assists') as HTMLElement
+const teamListEl = document.getElementById('teamlist') as HTMLDivElement
 const resultOverlay = document.getElementById('result') as HTMLDivElement
 const resultTitle = document.getElementById('resulttitle') as HTMLHeadingElement
 const resultScore = document.getElementById('resultscore') as HTMLParagraphElement
@@ -354,7 +358,11 @@ function renderTeamRows(el: HTMLDivElement, list: PlayerSnapshot[]): void {
     deaths.className = 'pd'
     deaths.textContent = String(player.deaths)
 
-    row.append(name, kills, deaths)
+    const assists = document.createElement('span')
+    assists.className = 'pa'
+    assists.textContent = String(player.assists)
+
+    row.append(name, kills, deaths, assists)
     el.append(row)
   }
 
@@ -363,6 +371,34 @@ function renderTeamRows(el: HTMLDivElement, list: PlayerSnapshot[]): void {
     empty.className = 'row empty'
     empty.textContent = '—'
     el.append(empty)
+  }
+}
+
+function renderTeamList(players: PlayerSnapshot[], me: PlayerSnapshot): void {
+  teamListEl.replaceChildren()
+  for (const mate of players) {
+    if (mate.team !== me.team || mate.id === me.id) continue
+
+    const row = document.createElement('div')
+    row.className = mate.alive ? 'mate' : 'mate dead'
+
+    const name = document.createElement('span')
+    name.className = 'mate-name'
+    name.textContent = mate.name
+
+    const track = document.createElement('div')
+    track.className = 'mate-track'
+    const fill = document.createElement('div')
+    fill.className = 'mate-fill'
+    fill.style.width = `${Math.max(0, Math.min(100, mate.hp))}%`
+    track.append(fill)
+
+    const hp = document.createElement('span')
+    hp.className = 'mate-hp'
+    hp.textContent = mate.alive ? String(mate.hp) : '—'
+
+    row.append(name, track, hp)
+    teamListEl.append(row)
   }
 }
 
@@ -438,6 +474,10 @@ net.onSnapshot = (snap: Snapshot) => {
   latestMe = me
   updateVitals(me)
   updateWeapon(me)
+  killsEl.textContent = String(me.kills)
+  deathsEl.textContent = String(me.deaths)
+  assistsEl.textContent = String(me.assists)
+  renderTeamList(snap.players, me)
   if (me.hp < lastHp) {
     flashHurt()
     sound.hurt()
@@ -667,6 +707,7 @@ function frame(now: number): void {
       jump: input.consumeJump(),
       yaw: input.yaw,
       pitch: input.pitch,
+      ads: input.ads,
     }
 
     seq += 1
@@ -686,8 +727,9 @@ function frame(now: number): void {
   }
 
   if (sceneView) {
-    sceneView.update(dt, local, latestPlayers, selfId)
+    sceneView.update(dt, local, latestPlayers, selfId, input.ads, input.sprint && input.forward() > 0)
   }
+  crosshair.classList.toggle('ads', input.ads)
 }
 
 if (new URLSearchParams(location.search).has('debug')) {

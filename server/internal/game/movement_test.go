@@ -20,8 +20,8 @@ func TestWalkForward(t *testing.T) {
 		Step(&s, in, w)
 	}
 
-	if math.Abs(s.Z-5.2) > 0.001 {
-		t.Fatalf("z = %v, want 5.2", s.Z)
+	if math.Abs(s.Z-4.8) > 0.001 {
+		t.Fatalf("z = %v, want 4.8", s.Z)
 	}
 	if math.Abs(s.X) > 0.001 {
 		t.Fatalf("x drifted to %v", s.X)
@@ -37,8 +37,8 @@ func TestSprint(t *testing.T) {
 		Step(&s, in, w)
 	}
 
-	if math.Abs(s.Z-3.4) > 0.001 {
-		t.Fatalf("z = %v, want 3.4", s.Z)
+	if math.Abs(s.Z-2.4) > 0.001 {
+		t.Fatalf("z = %v, want 2.4", s.Z)
 	}
 }
 
@@ -51,7 +51,7 @@ func TestDiagonalIsNormalized(t *testing.T) {
 		Step(&s, in, w)
 	}
 
-	diagonal := 4.8 / math.Sqrt2
+	diagonal := 5.2 / math.Sqrt2
 	if math.Abs(s.Z-(10-diagonal)) > 0.001 || math.Abs(s.X-diagonal) > 0.001 {
 		t.Fatalf("position = (%v, %v), want (%v, %v)", s.X, s.Z, diagonal, 10-diagonal)
 	}
@@ -189,5 +189,20 @@ func TestFastFallDoesNotTunnel(t *testing.T) {
 	}
 	if math.Abs(s.Y-1.0) > 0.001 || !s.OnGround {
 		t.Fatalf("y = %v ground = %v, want crate top 1.0", s.Y, s.OnGround)
+	}
+}
+
+func TestAdsSlowsMovement(t *testing.T) {
+	w := openWorld()
+	s := State{X: 0, Z: 10, OnGround: true}
+	in := protocol.Input{Dt: 0.05, Forward: 1, Ads: true}
+
+	for i := 0; i < 20; i++ {
+		Step(&s, in, w)
+	}
+
+	want := 10 - 5.2*AdsSpeedMultiplier
+	if math.Abs(s.Z-want) > 0.001 {
+		t.Fatalf("z = %v, want %v", s.Z, want)
 	}
 }

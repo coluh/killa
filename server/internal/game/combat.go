@@ -113,8 +113,12 @@ func (r *Room) applyShot(p *Player, yaw, pitch float64, now time.Time) {
 	}
 
 	pitch = clamp(pitch, -PitchLimit, PitchLimit)
-	yaw += (rand.Float64()*2 - 1) * weapon.Spread
-	pitch = clamp(pitch+(rand.Float64()*2-1)*weapon.Spread*0.6, -PitchLimit, PitchLimit)
+	spread := weapon.Spread
+	if p.State.Ads {
+		spread *= AdsSpreadMultiplier
+	}
+	yaw += (rand.Float64()*2 - 1) * spread
+	pitch = clamp(pitch+(rand.Float64()*2-1)*spread*0.6, -PitchLimit, PitchLimit)
 
 	ox := p.State.X
 	oy := p.State.Y + EyeHeight
@@ -162,6 +166,10 @@ func (r *Room) applyShot(p *Player, yaw, pitch float64, now time.Time) {
 		if headshot {
 			damage = weapon.HeadDamage
 		}
+		if best.Damagers == nil {
+			best.Damagers = make(map[string]time.Time)
+		}
+		best.Damagers[p.ID] = now
 		damage = applyArmor(best, damage, headshot)
 		best.HP -= damage
 		if best.HP <= 0 {
@@ -215,6 +223,16 @@ func (r *Room) kill(killer, victim *Player, now time.Time) {
 	victim.Deaths++
 	victim.RespawnAt = now.Add(RespawnDelay)
 	killer.Kills++
+	for id, damagedAt := range victim.Damagers {
+		if id == killer.ID || now.Sub(damagedAt) > AssistWindow {
+			continue
+		}
+		if helper := r.players[id]; helper != nil {
+			helper.Assists++
+		}
+	}
+	victim.Damagers = nil
+
 	if r.matchState == MatchLive {
 		r.score[killer.Team]++
 		if r.score[killer.Team] >= r.scoreLimit {
@@ -243,6 +261,7 @@ func (r *Room) respawnDead(now time.Time) {
 		p.ProtectedUntil = now.Add(SpawnProtectionTime)
 		p.History = p.History[:0]
 		p.LastShot = time.Time{}
+		p.Damagers = nil
 		r.equip(p)
 		if p.Brain != nil {
 			p.Brain.targetID = ""

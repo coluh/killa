@@ -48,6 +48,7 @@ WebSocket 文本帧，JSON。生产环境走 `wss://<host>/ws`。
 | `jump` | 本帧是否起跳 |
 | `yaw` / `pitch` | 朝向弧度；pitch 限制 ±1.5 |
 | `rtt` | 客户端测得的往返延迟（毫秒），服务端截断到 [0, 250]，用于命中回溯 |
+| `ads` | 是否开镜；开镜时移速 ×0.55、扩散 ×0.35 |
 
 ### loadout
 
@@ -155,6 +156,8 @@ WebSocket 文本帧，JSON。生产环境走 `wss://<host>/ws`。
 - `weapon` / `ammo`：当前武器与剩余弹药。
 - `reloading` / `reloadIn`：是否换弹中、剩余换弹秒数。
 - `vest` / `helmet`：护甲/头盔耐久（0–100）。
+- `ads`：该玩家当前是否开镜。
+- `assists`：本局助攻数（对击杀者之外、5 秒内造成过伤害的敌人计数）。
 
 ### match
 

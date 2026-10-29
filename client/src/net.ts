@@ -46,6 +46,8 @@ export interface PlayerSnapshot {
   reloadIn: number
   vest: number
   helmet: number
+  ads: boolean
+  assists: number
 }
 
 export interface WeaponInfo {

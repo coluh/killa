@@ -2,6 +2,7 @@
 export class Sound {
   private ctx: AudioContext | null = null
   private master: GainNode | null = null
+  private compressor: DynamicsCompressorNode | null = null
   private volume = 0.8
 
   resume(): void {
@@ -12,8 +13,15 @@ export class Sound {
       if (!ctor) return
       this.ctx = new ctor()
       this.master = this.ctx.createGain()
-      this.master.gain.value = 0.22 * this.volume
-      this.master.connect(this.ctx.destination)
+      this.master.gain.value = 0.5 * this.volume
+      this.compressor = this.ctx.createDynamicsCompressor()
+      this.compressor.threshold.value = -16
+      this.compressor.knee.value = 24
+      this.compressor.ratio.value = 6
+      this.compressor.attack.value = 0.003
+      this.compressor.release.value = 0.25
+      this.master.connect(this.compressor)
+      this.compressor.connect(this.ctx.destination)
     }
     if (this.ctx.state === 'suspended') {
       void this.ctx.resume()
@@ -73,40 +81,41 @@ export class Sound {
   setVolume(value: number): void {
     this.volume = Math.max(0, Math.min(1, value))
     if (this.master) {
-      this.master.gain.value = 0.22 * this.volume
+      this.master.gain.value = 0.5 * this.volume
     }
   }
 
   shoot(smg: boolean, volume = 1): void {
     this.resume()
-    this.burst(0.08, smg ? 1900 : 950, 0.8, 0.55 * volume)
-    this.tone(smg ? 190 : 150, 0.05, 0.15 * volume, 'square', smg ? 120 : 90)
+    this.burst(0.09, smg ? 2400 : 1200, 0.7, 1.0 * volume)
+    this.burst(0.18, smg ? 500 : 320, 0.6, 0.6 * volume)
+    this.tone(smg ? 160 : 90, 0.09, 0.35 * volume, 'sine', smg ? 80 : 45)
   }
 
   hit(): void {
-    this.tone(1400, 0.05, 0.2, 'triangle')
+    this.tone(1800, 0.05, 0.3, 'triangle')
   }
 
   kill(): void {
-    this.tone(700, 0.12, 0.18, 'sine')
-    window.setTimeout(() => this.tone(350, 0.16, 0.14, 'triangle'), 70)
+    this.tone(800, 0.12, 0.24, 'sine')
+    window.setTimeout(() => this.tone(400, 0.18, 0.2, 'triangle'), 70)
   }
 
   hurt(): void {
-    this.tone(90, 0.18, 0.3, 'sine', 60)
+    this.tone(70, 0.2, 0.5, 'sine', 45)
   }
 
   death(): void {
-    this.tone(220, 0.5, 0.25, 'sawtooth', 70)
+    this.tone(180, 0.55, 0.4, 'sawtooth', 50)
   }
 
   reloadStart(): void {
-    this.tone(320, 0.05, 0.12, 'square')
-    window.setTimeout(() => this.tone(240, 0.05, 0.12, 'square'), 110)
+    this.tone(320, 0.05, 0.28, 'square')
+    window.setTimeout(() => this.tone(240, 0.05, 0.28, 'square'), 110)
   }
 
   reloadEnd(): void {
-    this.tone(520, 0.05, 0.14, 'square')
+    this.tone(520, 0.05, 0.3, 'square')
   }
 
   spawn(): void {

@@ -85,6 +85,7 @@ export class SceneView {
   private readonly remotes = new Map<string, Remote>()
   private readonly tracers: Tracer[] = []
   private readonly handleResize = (): void => this.resize()
+  private viewmodel: THREE.Group | null = null
 
   constructor(container: HTMLElement, map: GameMap, selfTeam: number) {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' })
@@ -254,6 +255,7 @@ export class SceneView {
     keyLight.position.set(0.3, 0.1, -0.2)
     this.camera.add(keyLight)
 
+    this.viewmodel = group
     this.camera.add(group)
   }
 
@@ -295,9 +297,30 @@ export class SceneView {
     this.renderer.setSize(window.innerWidth, window.innerHeight)
   }
 
-  update(dt: number, local: MoveState, players: PlayerSnapshot[], selfId: string): void {
+  update(
+    dt: number,
+    local: MoveState,
+    players: PlayerSnapshot[],
+    selfId: string,
+    ads: boolean,
+    sprinting: boolean,
+  ): void {
     this.camera.position.set(local.x, local.y + EYE_HEIGHT, local.z)
     this.camera.rotation.set(local.pitch, local.yaw, 0)
+
+    const targetFov = ads ? 55 : sprinting ? 80 : 75
+    this.camera.fov += (targetFov - this.camera.fov) * (1 - Math.exp(-14 * dt))
+    this.camera.updateProjectionMatrix()
+
+    if (this.viewmodel) {
+      const blend = 1 - Math.exp(-16 * dt)
+      const targetX = ads ? -0.24 : 0
+      const targetY = ads ? 0.07 : 0
+      const targetZ = ads ? 0.12 : 0
+      this.viewmodel.position.x += (targetX - this.viewmodel.position.x) * blend
+      this.viewmodel.position.y += (targetY - this.viewmodel.position.y) * blend
+      this.viewmodel.position.z += (targetZ - this.viewmodel.position.z) * blend
+    }
 
     const seen = new Set<string>()
     for (const player of players) {

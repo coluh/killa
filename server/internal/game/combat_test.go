@@ -301,3 +301,33 @@ func TestJoinWithWeapon(t *testing.T) {
 		}
 	}
 }
+
+func TestAssistOnKill(t *testing.T) {
+	room, p1, p2 := newCombatRoom()
+	now := time.Now()
+
+	p3 := &Player{
+		ID: "p3", Name: "three", Team: 0, HP: MaxHealth, Alive: true,
+		Peer: &fakePeer{}, Loadout: "ar", Weapon: "ar", Ammo: 30,
+	}
+	room.players[p3.ID] = p3
+	room.byPeer[p3.Peer] = p3
+
+	room.applyShot(p3, 0, -0.1, now)
+	if p2.HP >= MaxHealth {
+		t.Fatalf("assist damage did not land: hp = %d", p2.HP)
+	}
+
+	room.applyShot(p1, 0, 0, now.Add(200*time.Millisecond))
+	room.applyShot(p1, 0, 0, now.Add(400*time.Millisecond))
+
+	if p2.Alive {
+		t.Fatalf("victim still alive with hp = %d", p2.HP)
+	}
+	if p3.Assists != 1 {
+		t.Fatalf("assists = %d, want 1", p3.Assists)
+	}
+	if p1.Kills != 1 {
+		t.Fatalf("kills = %d, want 1", p1.Kills)
+	}
+}

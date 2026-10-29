@@ -39,9 +39,9 @@ type botBrain struct {
 
 func newBotBrain(now time.Time) *botBrain {
 	return &botBrain{
-		aimErr:         0.012 + rand.Float64()*0.02,
-		turnRate:       3.0 + rand.Float64()*2.5,
-		reaction:       time.Duration(220+rand.Intn(300)) * time.Millisecond,
+		aimErr:         0.03 + rand.Float64()*0.05,
+		turnRate:       1.8 + rand.Float64()*1.6,
+		reaction:       time.Duration(450+rand.Intn(500)) * time.Millisecond,
 		nextThink:      now,
 		nextStuckCheck: now.Add(time.Second),
 	}
@@ -251,7 +251,7 @@ func (r *Room) updateBot(p *Player, now time.Time, dt float64) {
 	dist := math.Hypot(aimX-p.State.X, aimZ-p.State.Z)
 	los := r.world.lineOfSight(p.State.X, eyeY, p.State.Z, aimX, aimY, aimZ)
 
-	if los && dist <= 30 {
+	if los && dist <= 24 {
 		yaw, pitch := aimAngles(p.State.X, eyeY, p.State.Z, aimX, aimY, aimZ)
 		r.turnBot(p, b, yaw, pitch, dt)
 		r.botStrafe(p, b, now, dt, aimX, aimZ)
@@ -263,11 +263,11 @@ func (r *Room) updateBot(p *Player, now time.Time, dt float64) {
 			errPitch := (rand.Float64()*2 - 1) * b.aimErr * 0.6
 			r.applyShot(p, p.State.Yaw+errYaw, p.State.Pitch+errPitch, now)
 
-			b.nextShot = now.Add(160*time.Millisecond + time.Duration(rand.Intn(50))*time.Millisecond)
+			b.nextShot = now.Add(260*time.Millisecond + time.Duration(rand.Intn(120))*time.Millisecond)
 			b.burst++
-			if b.burst >= 3+rand.Intn(3) {
+			if b.burst >= 2+rand.Intn(2) {
 				b.burst = 0
-				b.burstPause = now.Add(time.Duration(320+rand.Intn(420)) * time.Millisecond)
+				b.burstPause = now.Add(time.Duration(500+rand.Intn(500)) * time.Millisecond)
 			}
 		}
 		return
@@ -388,7 +388,7 @@ func (r *Room) botStrafe(p *Player, b *botBrain, now time.Time, dt, targetX, tar
 	}
 	dx := targetX - p.State.X
 	dz := targetZ - p.State.Z
-	r.moveBot(p, -dz*b.strafeDir, dx*b.strafeDir, 1.8, dt)
+	r.moveBot(p, -dz*b.strafeDir, dx*b.strafeDir, 1.2, dt)
 }
 
 func (r *Room) pickBotTarget(p *Player) *Player {

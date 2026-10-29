@@ -8,6 +8,7 @@ export class Input {
   pitch = 0
   jump = false
   fire = false
+  ads = false
   sensitivity = 0.0022
 
   constructor() {
@@ -23,19 +24,27 @@ export class Input {
 
     document.addEventListener('mousemove', (event) => {
       if (!this.locked) return
-      this.yaw -= event.movementX * this.sensitivity
+      const sensitivity = this.sensitivity * (this.ads ? 0.65 : 1)
+      this.yaw -= event.movementX * sensitivity
       this.pitch = Math.max(
         -PITCH_LIMIT,
-        Math.min(PITCH_LIMIT, this.pitch - event.movementY * this.sensitivity),
+        Math.min(PITCH_LIMIT, this.pitch - event.movementY * sensitivity),
       )
     })
 
     document.addEventListener('mousedown', (event) => {
-      if (event.button === 0 && this.locked) this.fire = true
+      if (!this.locked) return
+      if (event.button === 0) this.fire = true
+      if (event.button === 2) this.ads = true
     })
 
     document.addEventListener('mouseup', (event) => {
       if (event.button === 0) this.fire = false
+      if (event.button === 2) this.ads = false
+    })
+
+    document.addEventListener('contextmenu', (event) => {
+      if (this.locked) event.preventDefault()
     })
 
     document.addEventListener('pointerlockchange', () => {
@@ -43,12 +52,14 @@ export class Input {
       if (!this.locked) {
         this.keys.clear()
         this.fire = false
+        this.ads = false
       }
     })
 
     window.addEventListener('blur', () => {
       this.keys.clear()
       this.fire = false
+      this.ads = false
     })
   }
 

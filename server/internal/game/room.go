@@ -50,6 +50,8 @@ type Player struct {
 	ReloadEnds time.Time
 	Vest       int
 	Helmet     int
+	Damagers   map[string]time.Time
+	Assists    int
 
 	LastShot       time.Time
 	RespawnAt      time.Time
@@ -337,6 +339,8 @@ func (r *Room) snapshotFor(me *Player, now time.Time) protocol.Snapshot {
 			ReloadIn:  reloadIn,
 			Vest:      p.Vest,
 			Helmet:    p.Helmet,
+			Ads:       p.State.Ads,
+			Assists:   p.Assists,
 		})
 	}
 	sort.Slice(players, func(i, j int) bool { return players[i].ID < players[j].ID })

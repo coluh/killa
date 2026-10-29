@@ -15,6 +15,7 @@ type State struct {
 	OnGround bool
 	Yaw      float64
 	Pitch    float64
+	Ads      bool
 }
 
 // Step advances one player by one input. It must stay byte-for-byte equivalent
@@ -30,6 +31,7 @@ func Step(s *State, in protocol.Input, w *World) {
 
 	s.Yaw = in.Yaw
 	s.Pitch = clamp(in.Pitch, -PitchLimit, PitchLimit)
+	s.Ads = in.Ads
 
 	forward := in.Forward
 	right := in.Right
@@ -40,8 +42,11 @@ func Step(s *State, in protocol.Input, w *World) {
 	}
 
 	speed := WalkSpeed
-	if in.Sprint {
+	if in.Sprint && !in.Ads {
 		speed = SprintSpeed
+	}
+	if in.Ads {
+		speed *= AdsSpeedMultiplier
 	}
 
 	sin, cos := math.Sincos(s.Yaw)

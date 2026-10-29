@@ -25,6 +25,7 @@ type Input struct {
 	Yaw     float64 `json:"yaw"`
 	Pitch   float64 `json:"pitch"`
 	RTT     float64 `json:"rtt"`
+	Ads     bool    `json:"ads"`
 }
 
 type Shoot struct {
@@ -165,4 +166,6 @@ type Player struct {
 	ReloadIn  float64 `json:"reloadIn"`
 	Vest      int     `json:"vest"`
 	Helmet    int     `json:"helmet"`
+	Ads       bool    `json:"ads"`
+	Assists   int     `json:"assists"`
 }

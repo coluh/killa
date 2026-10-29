@@ -2,10 +2,11 @@ import type { GameMap } from './net'
 
 export const PLAYER_RADIUS = 0.4
 export const EYE_HEIGHT = 1.6
-export const WALK_SPEED = 4.8
-export const SPRINT_SPEED = 6.6
+export const WALK_SPEED = 5.2
+export const SPRINT_SPEED = 7.6
+export const ADS_SPEED_MULTIPLIER = 0.55
 export const GRAVITY = 20
-export const JUMP_SPEED = 7.2
+export const JUMP_SPEED = 7.4
 export const MAX_DT = 0.1
 export const PITCH_LIMIT = 1.5
 
@@ -27,6 +28,7 @@ export interface MoveInput {
   jump: boolean
   yaw: number
   pitch: number
+  ads: boolean
 }
 
 function clamp(v: number, lo: number, hi: number): number {
@@ -107,7 +109,8 @@ export function step(state: MoveState, input: MoveInput, world: World): MoveStat
     right /= magnitude
   }
 
-  const speed = input.sprint ? SPRINT_SPEED : WALK_SPEED
+  let speed = input.sprint && !input.ads ? SPRINT_SPEED : WALK_SPEED
+  if (input.ads) speed *= ADS_SPEED_MULTIPLIER
   const sin = Math.sin(s.yaw)
   const cos = Math.cos(s.yaw)
   const dx = (-forward * sin + right * cos) * speed * dt

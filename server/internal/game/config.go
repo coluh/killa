@@ -15,11 +15,14 @@ const (
 	PlayerHeight = 1.7
 	HeadHeight   = 1.35
 
-	WalkSpeed   = 4.8
-	SprintSpeed = 6.6
+	WalkSpeed   = 5.2
+	SprintSpeed = 7.6
 
 	Gravity   = 20.0
-	JumpSpeed = 7.2
+	JumpSpeed = 7.4
+
+	AdsSpeedMultiplier  = 0.55
+	AdsSpreadMultiplier = 0.35
 
 	MaxDt      = 0.1
 	PitchLimit = 1.5
@@ -31,6 +34,7 @@ const (
 	HeadDamage = 48
 
 	FireInterval        = 100 * time.Millisecond
+	AssistWindow        = 5 * time.Second
 	RespawnDelay        = 3 * time.Second
 	SpawnProtectionTime = 1500 * time.Millisecond
 )
