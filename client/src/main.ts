@@ -166,10 +166,10 @@ function updateVitals(me: PlayerSnapshot): void {
   hpNum.textContent = String(hp)
   hpFill.classList.toggle('low', hp <= 30)
 
-  const vest = Math.max(0, Math.min(100, me.vest))
-  const helmet = Math.max(0, Math.min(100, me.helmet))
-  vestFill.style.width = `${vest}%`
-  helmetFill.style.width = `${helmet}%`
+  const vest = Math.max(0, Math.min(200, me.vest))
+  const helmet = Math.max(0, Math.min(200, me.helmet))
+  vestFill.style.width = `${vest / 2}%`
+  helmetFill.style.width = `${helmet / 2}%`
   vestNum.textContent = String(vest)
   helmetNum.textContent = String(helmet)
 }

@@ -178,11 +178,11 @@ func TestVestAbsorbsBodyDamage(t *testing.T) {
 	p2.Vest = 100
 	room.applyShot(p1, 0, -0.1, time.Now())
 
-	if p2.HP != MaxHealth-16 {
-		t.Fatalf("hp = %d, want %d", p2.HP, MaxHealth-16)
+	if p2.HP != MaxHealth-24 {
+		t.Fatalf("hp = %d, want %d", p2.HP, MaxHealth-24)
 	}
-	if p2.Vest != 92 {
-		t.Fatalf("vest = %d, want 92", p2.Vest)
+	if p2.Vest != 83 {
+		t.Fatalf("vest = %d, want 83", p2.Vest)
 	}
 }
 
@@ -191,11 +191,11 @@ func TestHelmetAbsorbsHeadDamage(t *testing.T) {
 	p2.Helmet = 100
 	room.applyShot(p1, 0, 0, time.Now())
 
-	if p2.HP != MaxHealth-32 {
-		t.Fatalf("hp = %d, want %d", p2.HP, MaxHealth-32)
+	if p2.HP != MaxHealth-56 {
+		t.Fatalf("hp = %d, want %d", p2.HP, MaxHealth-56)
 	}
-	if p2.Helmet != 84 {
-		t.Fatalf("helmet = %d, want 84", p2.Helmet)
+	if p2.Helmet != 62 {
+		t.Fatalf("helmet = %d, want 62", p2.Helmet)
 	}
 }
 
@@ -232,8 +232,8 @@ func TestEquipLoadout(t *testing.T) {
 	if p1.Ammo != weaponByID("smg").MagSize {
 		t.Fatalf("ammo = %d, want %d", p1.Ammo, weaponByID("smg").MagSize)
 	}
-	if p1.Vest != 100 || p1.Helmet != 100 {
-		t.Fatalf("armor = %d/%d, want 100/100", p1.Vest, p1.Helmet)
+	if p1.Vest != ArmorDurability || p1.Helmet != ArmorDurability {
+		t.Fatalf("armor = %d/%d, want %d", p1.Vest, p1.Helmet, ArmorDurability)
 	}
 }
 
@@ -264,8 +264,8 @@ func TestLoadoutAppliedOnRespawn(t *testing.T) {
 	if p1.Ammo != weaponByID("smg").MagSize {
 		t.Fatalf("ammo = %d, want %d", p1.Ammo, weaponByID("smg").MagSize)
 	}
-	if p1.Vest != 100 || p1.Helmet != 100 {
-		t.Fatalf("armor = %d/%d, want 100/100", p1.Vest, p1.Helmet)
+	if p1.Vest != ArmorDurability || p1.Helmet != ArmorDurability {
+		t.Fatalf("armor = %d/%d, want %d", p1.Vest, p1.Helmet, ArmorDurability)
 	}
 }
 
@@ -329,5 +329,23 @@ func TestAssistOnKill(t *testing.T) {
 	}
 	if p1.Kills != 1 {
 		t.Fatalf("kills = %d, want 1", p1.Kills)
+	}
+}
+
+func TestRegenAfterDelay(t *testing.T) {
+	room, p1, _ := newCombatRoom()
+	now := time.Now()
+	p1.HP = 40
+	p1.LastDamaged = now
+
+	room.regen(now)
+	if p1.HP != 40 {
+		t.Fatalf("regened too early: hp = %d", p1.HP)
+	}
+
+	p1.LastDamaged = now.Add(-RegenDelay - time.Second)
+	room.regen(now)
+	if p1.HP != 41 {
+		t.Fatalf("hp = %d, want 41", p1.HP)
 	}
 }

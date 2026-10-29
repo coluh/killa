@@ -117,6 +117,9 @@ func (r *Room) applyShot(p *Player, yaw, pitch float64, now time.Time) {
 	if p.State.Ads {
 		spread *= AdsSpreadMultiplier
 	}
+	if p.IsBot {
+		spread *= BotSpreadMultiplier
+	}
 	yaw += (rand.Float64()*2 - 1) * spread
 	pitch = clamp(pitch+(rand.Float64()*2-1)*spread*0.6, -PitchLimit, PitchLimit)
 
@@ -170,6 +173,7 @@ func (r *Room) applyShot(p *Player, yaw, pitch float64, now time.Time) {
 			best.Damagers = make(map[string]time.Time)
 		}
 		best.Damagers[p.ID] = now
+		best.LastDamaged = now
 		damage = applyArmor(best, damage, headshot)
 		best.HP -= damage
 		if best.HP <= 0 {
@@ -198,7 +202,7 @@ func applyArmor(target *Player, damage int, headshot bool) int {
 		if target.Helmet <= 0 {
 			return damage
 		}
-		absorbed := damage * 35 / 100
+		absorbed := (damage*ArmorReduction + 99) / 100
 		if absorbed > target.Helmet {
 			absorbed = target.Helmet
 		}
@@ -209,7 +213,7 @@ func applyArmor(target *Player, damage int, headshot bool) int {
 	if target.Vest <= 0 {
 		return damage
 	}
-	absorbed := damage * 35 / 100
+	absorbed := (damage*ArmorReduction + 99) / 100
 	if absorbed > target.Vest {
 		absorbed = target.Vest
 	}

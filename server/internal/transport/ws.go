@@ -78,7 +78,7 @@ func (s *Server) HandleWS(w http.ResponseWriter, r *http.Request) {
 
 	var join protocol.Join
 	if err := ws.ReadJSON(&join); err != nil || join.Type != "join" {
-		_ = conn.Send(protocol.Error{Type: "error", Message: "expected join message"})
+		_ = conn.SendReliable(protocol.Error{Type: "error", Message: "expected join message"})
 		time.Sleep(50 * time.Millisecond)
 		_ = conn.Close()
 		return
@@ -87,7 +87,7 @@ func (s *Server) HandleWS(w http.ResponseWriter, r *http.Request) {
 	room, err := s.joiner.Join(conn, join.Name, join.Weapon)
 	if err != nil {
 		log.Printf("killa: join rejected: %v", err)
-		_ = conn.Send(protocol.Error{Type: "error", Message: err.Error()})
+		_ = conn.SendReliable(protocol.Error{Type: "error", Message: err.Error()})
 		time.Sleep(50 * time.Millisecond)
 		_ = conn.Close()
 		return
@@ -112,8 +112,8 @@ func (s *Server) HandleWS(w http.ResponseWriter, r *http.Request) {
 		}
 		windowCount++
 		if windowCount > maxMessagesPerSecond {
-			_ = conn.Send(protocol.Error{Type: "error", Message: "rate limit exceeded"})
-			time.Sleep(20 * time.Millisecond)
+			_ = conn.SendReliable(protocol.Error{Type: "error", Message: "rate limit exceeded"})
+			time.Sleep(50 * time.Millisecond)
 			return
 		}
 
@@ -162,6 +162,28 @@ func newConn(ws *websocket.Conn) *Conn {
 		ws:   ws,
 		send: make(chan []byte, 64),
 		done: make(chan struct{}),
+	}
+}
+
+// SendReliable behaves like Send but waits for queue space instead of dropping.
+// It is used for error messages right before closing the connection.
+func (c *Conn) SendReliable(v any) error {
+	payload, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	select {
+	case <-c.done:
+		return errConnClosed
+	default:
+	}
+	select {
+	case c.send <- payload:
+		return nil
+	case <-c.done:
+		return errConnClosed
+	case <-time.After(200 * time.Millisecond):
+		return errConnClosed
 	}
 }
 

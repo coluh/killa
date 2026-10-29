@@ -43,15 +43,16 @@ type Player struct {
 	IsBot   bool
 	Brain   *botBrain
 
-	Loadout    string
-	Weapon     string
-	Ammo       int
-	Reloading  bool
-	ReloadEnds time.Time
-	Vest       int
-	Helmet     int
-	Damagers   map[string]time.Time
-	Assists    int
+	Loadout     string
+	Weapon      string
+	Ammo        int
+	Reloading   bool
+	ReloadEnds  time.Time
+	Vest        int
+	Helmet      int
+	Damagers    map[string]time.Time
+	Assists     int
+	LastDamaged time.Time
 
 	LastShot       time.Time
 	RespawnAt      time.Time
@@ -296,6 +297,7 @@ func (r *Room) tick() {
 	r.rebalanceBots(now)
 	r.respawnDead(now)
 	r.completeReloads(now)
+	r.regen(now)
 	r.updateBots(now, 1.0/float64(TickRate))
 	r.tickCount++
 	for _, p := range r.players {
@@ -537,8 +539,8 @@ func (r *Room) equip(p *Player) {
 	p.Ammo = w.MagSize
 	p.Reloading = false
 	p.ReloadEnds = time.Time{}
-	p.Vest = 100
-	p.Helmet = 100
+	p.Vest = ArmorDurability
+	p.Helmet = ArmorDurability
 }
 
 func (r *Room) startReload(p *Player, now time.Time) {
@@ -551,6 +553,22 @@ func (r *Room) startReload(p *Player, now time.Time) {
 	}
 	p.Reloading = true
 	p.ReloadEnds = now.Add(w.ReloadTime)
+}
+
+// regen restores health after a few seconds without taking damage.
+func (r *Room) regen(now time.Time) {
+	for _, p := range r.players {
+		if !p.Alive || p.HP >= MaxHealth || p.LastDamaged.IsZero() {
+			continue
+		}
+		if now.Sub(p.LastDamaged) < RegenDelay {
+			continue
+		}
+		p.HP++
+		if p.HP > MaxHealth {
+			p.HP = MaxHealth
+		}
+	}
 }
 
 func (r *Room) completeReloads(now time.Time) {

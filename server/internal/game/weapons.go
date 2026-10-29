@@ -28,8 +28,8 @@ var weaponTable = map[string]Weapon{
 	"ar": {
 		ID:           "ar",
 		Name:         "M416",
-		Damage:       24,
-		HeadDamage:   48,
+		Damage:       41,
+		HeadDamage:   94,
 		FireInterval: 100 * time.Millisecond,
 		MagSize:      30,
 		ReloadTime:   1800 * time.Millisecond,
@@ -40,8 +40,8 @@ var weaponTable = map[string]Weapon{
 	"smg": {
 		ID:           "smg",
 		Name:         "UZI",
-		Damage:       18,
-		HeadDamage:   36,
+		Damage:       26,
+		HeadDamage:   55,
 		FireInterval: 70 * time.Millisecond,
 		MagSize:      25,
 		ReloadTime:   1500 * time.Millisecond,

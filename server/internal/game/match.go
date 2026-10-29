@@ -124,6 +124,7 @@ func (r *Room) resetPlayersForMatch(now time.Time) {
 		p.History = p.History[:0]
 		p.LastShot = time.Time{}
 		p.Damagers = nil
+		p.LastDamaged = time.Time{}
 		p.Assists = 0
 		r.equip(p)
 		if p.Brain != nil {

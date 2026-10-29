@@ -30,11 +30,16 @@ const (
 	MaxNameRunes = 16
 
 	MaxHealth  = 100
-	BodyDamage = 24
-	HeadDamage = 48
+	BodyDamage = 41
+	HeadDamage = 94
+
+	ArmorDurability = 200
+	ArmorReduction  = 40
+	RegenDelay      = 5 * time.Second
 
 	FireInterval        = 100 * time.Millisecond
 	AssistWindow        = 5 * time.Second
+	BotSpreadMultiplier = 2.5
 	RespawnDelay        = 3 * time.Second
-	SpawnProtectionTime = 1500 * time.Millisecond
+	SpawnProtectionTime = 2 * time.Second
 )
