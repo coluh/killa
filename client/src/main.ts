@@ -66,6 +66,7 @@ const resultOverlay = document.getElementById('result') as HTMLDivElement
 const resultTitle = document.getElementById('resulttitle') as HTMLHeadingElement
 const resultScore = document.getElementById('resultscore') as HTMLParagraphElement
 const resultNext = document.getElementById('resultnext') as HTMLParagraphElement
+const resultLobbyBtn = document.getElementById('resultlobby') as HTMLButtonElement
 const scoreboard = document.getElementById('scoreboard') as HTMLDivElement
 const teamAEl = document.getElementById('teamA') as HTMLDivElement
 const teamBEl = document.getElementById('teamB') as HTMLDivElement
@@ -111,6 +112,19 @@ const passBtn = document.getElementById('passbtn') as HTMLButtonElement
 const profileMsg = document.getElementById('profilemsg') as HTMLParagraphElement
 const logoutBtn = document.getElementById('logoutbtn') as HTMLButtonElement
 const deleteBtn = document.getElementById('deletebtn') as HTMLButtonElement
+const lobbyEl = document.getElementById('lobby') as HTMLDivElement
+const lobbyName = document.getElementById('lobbyname') as HTMLHeadingElement
+const lobbyTag = document.getElementById('lobbytag') as HTMLParagraphElement
+const lobbyStats = document.getElementById('lobbystats') as HTMLDivElement
+const lobbyWeapons = document.getElementById('lobbyweapons') as HTMLDivElement
+const lobbySens = document.getElementById('lobbysens') as HTMLInputElement
+const lobbySensValue = document.getElementById('lobbysensval') as HTMLOutputElement
+const lobbyVol = document.getElementById('lobbyvol') as HTMLInputElement
+const lobbyVolValue = document.getElementById('lobbyvolval') as HTMLOutputElement
+const startMatchBtn = document.getElementById('startmatch') as HTMLButtonElement
+const lobbyProfileBtn = document.getElementById('lobbyprofile') as HTMLButtonElement
+const lobbyLogoutBtn = document.getElementById('lobbylogout') as HTMLButtonElement
+const lobbyStatus = document.getElementById('lobbystatus') as HTMLParagraphElement
 
 const net = new Net()
 const input = new Input()
@@ -146,6 +160,8 @@ let profile: Profile | null = null
 let authBlocked = false
 let profileOpen = false
 let syncTimer: number | null = null
+let matching = false
+let resultScreen = false
 
 const weapons = new Map<string, WeaponInfo>()
 let selectedLoadout = 'ar'
@@ -192,6 +208,8 @@ function applySensitivity(multiplier: number): void {
   input.setSensitivity(BASE_SENSITIVITY * clamped)
   sensValue.textContent = clamped.toFixed(2)
   sensInput.value = String(clamped)
+  lobbySensValue.textContent = clamped.toFixed(2)
+  lobbySens.value = String(clamped)
   saveNumber('killa.sens', clamped)
 }
 
@@ -200,6 +218,8 @@ function applyVolume(volume: number): void {
   sound.setVolume(clamped)
   volValue.textContent = `${Math.round(clamped * 100)}%`
   volInput.value = String(clamped)
+  lobbyVolValue.textContent = `${Math.round(clamped * 100)}%`
+  lobbyVol.value = String(clamped)
   saveNumber('killa.vol', clamped)
 }
 
@@ -213,6 +233,14 @@ sensInput.addEventListener('input', () => {
 })
 volInput.addEventListener('input', () => {
   applyVolume(Number(volInput.value))
+  queueProfileSync()
+})
+lobbySens.addEventListener('input', () => {
+  applySensitivity(Number(lobbySens.value))
+  queueProfileSync()
+})
+lobbyVol.addEventListener('input', () => {
+  applyVolume(Number(lobbyVol.value))
   queueProfileSync()
 })
 
@@ -260,16 +288,91 @@ function setProfile(next: Profile): void {
   }
 }
 
+function lobbyStat(label: string, value: string): HTMLDivElement {
+  const box = document.createElement('div')
+  const b = document.createElement('b')
+  b.textContent = value
+  const span = document.createElement('span')
+  span.textContent = label
+  box.append(b, span)
+  return box
+}
+
+function renderLobby(): void {
+  if (!profile) return
+  lobbyName.textContent = profile.displayName
+  lobbyTag.textContent = profile.isGuest
+    ? '游客 · 绑定账号后可跨设备保存'
+    : `账号 · ${profile.username}`
+
+  const s = profile.stats
+  const rate = s.matches > 0 ? `${Math.round((s.wins / s.matches) * 100)}%` : '—'
+  lobbyStats.replaceChildren(
+    lobbyStat('击杀', String(s.kills)),
+    lobbyStat('胜率', rate),
+    lobbyStat('场次', String(s.matches)),
+  )
+  renderLoadoutCards()
+  lobbySens.value = sensInput.value
+  lobbySensValue.textContent = sensValue.textContent
+  lobbyVol.value = volInput.value
+  lobbyVolValue.textContent = volValue.textContent
+  startMatchBtn.disabled = false
+  lobbyStatus.textContent = '4v4 · 40 杀 / 10 分钟 · 机器人补位'
+}
+
+async function refreshLobbyProfile(): Promise<void> {
+  if (!profile) return
+  try {
+    const data = await api<{ profile: Profile }>('/api/me')
+    profile = data.profile
+    if (!lobbyEl.classList.contains('hidden')) renderLobby()
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 401) showLogin('登录已失效，请重新进入')
+  }
+}
+
+function showLobby(): void {
+  if (!profile) {
+    showLogin()
+    return
+  }
+  authBlocked = false
+  matching = false
+  resultScreen = false
+  initialized = false
+  started = false
+  reconnecting = false
+  profileOpen = false
+  if (document.pointerLockElement) document.exitPointerLock()
+  lobbyEl.classList.remove('hidden')
+  loginEl.classList.add('hidden')
+  profileEl.classList.add('hidden')
+  overlay.classList.add('hidden')
+  resultOverlay.classList.add('hidden')
+  deathOverlay.classList.add('hidden')
+  scoreboard.classList.add('hidden')
+  loadoutEl.classList.add('hidden')
+  renderLobby()
+  window.setTimeout(() => {
+    if (!lobbyEl.classList.contains('hidden')) void refreshLobbyProfile()
+  }, 250)
+}
+
 function showLogin(message = ''): void {
   if (syncTimer !== null) {
     window.clearTimeout(syncTimer)
     syncTimer = null
   }
   authBlocked = true
+  matching = false
+  resultScreen = false
   profile = null
   profileOpen = false
   accountBtn.classList.add('hidden')
   profileEl.classList.add('hidden')
+  lobbyEl.classList.add('hidden')
+  resultOverlay.classList.add('hidden')
   loginEl.classList.remove('hidden')
   loginError.textContent = message
   loginBtn.disabled = false
@@ -279,18 +382,20 @@ function showLogin(message = ''): void {
   window.setTimeout(() => loginName.focus(), 50)
 }
 
-function connectGame(): void {
+function connectGame(message = '正在连接服务器…'): void {
   authBlocked = false
+  matching = true
   loginEl.classList.add('hidden')
-  showOverlay('正在连接服务器…', '请稍候', true)
+  showOverlay(message, '请稍候', true)
   net.connect(profile?.loadout || selectedLoadout)
 }
 
 async function bootstrap(): Promise<void> {
+  await loadWeapons()
   try {
     const data = await api<{ profile: Profile }>('/api/session')
     setProfile(data.profile)
-    connectGame()
+    showLobby()
   } catch (err) {
     const message = err instanceof ApiError && err.status === 401 ? '' : '无法连接服务器，请稍后刷新重试'
     showLogin(message)
@@ -312,7 +417,7 @@ loginForm.addEventListener('submit', async (event) => {
     })
     loginPass.value = ''
     setProfile(data.profile)
-    connectGame()
+    showLobby()
   } catch (err) {
     loginError.textContent = err instanceof Error ? err.message : '进入失败'
     loginBtn.disabled = false
@@ -431,6 +536,10 @@ async function openProfile(): Promise<void> {
 function closeProfile(): void {
   profileOpen = false
   profileEl.classList.add('hidden')
+  if (!lobbyEl.classList.contains('hidden')) {
+    renderLobby()
+    return
+  }
   if (started && initialized && !reconnecting && !spectate) {
     showOverlay('已暂停', '继续战斗')
   }
@@ -438,6 +547,35 @@ function closeProfile(): void {
 
 accountBtn.addEventListener('click', () => void openProfile())
 profileClose.addEventListener('click', closeProfile)
+
+startMatchBtn.addEventListener('click', () => {
+  if (!profile) return
+  startMatchBtn.disabled = true
+  lobbyStatus.textContent = '正在匹配…'
+  lobbyEl.classList.add('hidden')
+  sound.resume()
+  resultScreen = false
+  // Ask for pointer lock while the click still counts as a user gesture.
+  requestLock(app)
+  connectGame('正在匹配…')
+})
+
+lobbyProfileBtn.addEventListener('click', () => void openProfile())
+
+lobbyLogoutBtn.addEventListener('click', async () => {
+  try {
+    await api('/api/auth/logout', { method: 'POST' })
+  } catch {
+    // clear the local state even if the request failed
+  }
+  showLogin('已退出登录')
+})
+
+resultLobbyBtn.addEventListener('click', () => {
+  resultScreen = false
+  resultOverlay.classList.add('hidden')
+  showLobby()
+})
 
 guestBtn.addEventListener('click', async () => {
   guestBtn.disabled = true
@@ -518,9 +656,9 @@ document.addEventListener('keydown', (event) => {
   void openProfile()
 })
 
-function requestLock(): void {
-  if (!sceneView || !initialized) return
-  const result = sceneView.canvas.requestPointerLock() as unknown
+function requestLock(target?: HTMLElement): void {
+  const el = target ?? sceneView?.canvas ?? app
+  const result = el.requestPointerLock() as unknown
   if (result instanceof Promise) result.catch(() => undefined)
 }
 
@@ -568,46 +706,64 @@ function requestReload(now: number): void {
   net.send({ type: 'reload' })
 }
 
+function selectLoadout(id: string, closeAfter: boolean): void {
+  selectedLoadout = id
+  saveString('killa.loadout', id)
+  for (const card of document.querySelectorAll<HTMLButtonElement>('.weapon-card')) {
+    card.classList.toggle('selected', card.dataset.weapon === id)
+  }
+  if (initialized) net.send({ type: 'loadout', weapon: id })
+  queueProfileSync()
+  if (closeAfter) closeLoadout(true)
+}
+
+function buildWeaponCard(info: WeaponInfo, closeAfter: boolean): HTMLButtonElement {
+  const card = document.createElement('button')
+  card.type = 'button'
+  card.dataset.weapon = info.id
+  card.className = info.id === selectedLoadout ? 'weapon-card selected' : 'weapon-card'
+
+  const title = document.createElement('h3')
+  title.textContent = info.name
+  card.append(title)
+
+  const stats = document.createElement('dl')
+  const rows: Array<[string, string]> = [
+    ['伤害', `${info.damage} / ${info.headDamage}`],
+    ['射速', `${Math.round(60000 / info.fireIntervalMs)} RPM`],
+    ['弹匣', String(info.magSize)],
+    ['换弹', `${(info.reloadMs / 1000).toFixed(1)}s`],
+    ['射程', `${info.range}m`],
+  ]
+  for (const [key, value] of rows) {
+    const dt = document.createElement('dt')
+    dt.textContent = key
+    const dd = document.createElement('dd')
+    dd.textContent = value
+    stats.append(dt, dd)
+  }
+  card.append(stats)
+
+  card.addEventListener('click', () => selectLoadout(info.id, closeAfter))
+  return card
+}
+
 function renderLoadoutCards(): void {
   loadoutCards.replaceChildren()
+  lobbyWeapons.replaceChildren()
   for (const info of weapons.values()) {
-    const card = document.createElement('button')
-    card.type = 'button'
-    card.className = info.id === selectedLoadout ? 'weapon-card selected' : 'weapon-card'
+    loadoutCards.append(buildWeaponCard(info, true))
+    lobbyWeapons.append(buildWeaponCard(info, false))
+  }
+}
 
-    const title = document.createElement('h3')
-    title.textContent = info.name
-    card.append(title)
-
-    const stats = document.createElement('dl')
-    const rows: Array<[string, string]> = [
-      ['伤害', `${info.damage} / ${info.headDamage}`],
-      ['射速', `${Math.round(60000 / info.fireIntervalMs)} RPM`],
-      ['弹匣', String(info.magSize)],
-      ['换弹', `${(info.reloadMs / 1000).toFixed(1)}s`],
-      ['射程', `${info.range}m`],
-    ]
-    for (const [key, value] of rows) {
-      const dt = document.createElement('dt')
-      dt.textContent = key
-      const dd = document.createElement('dd')
-      dd.textContent = value
-      stats.append(dt, dd)
-    }
-    card.append(stats)
-
-    card.addEventListener('click', () => {
-      selectedLoadout = info.id
-      for (const child of loadoutCards.children) {
-        child.classList.remove('selected')
-      }
-      card.classList.add('selected')
-      saveString('killa.loadout', info.id)
-      net.send({ type: 'loadout', weapon: info.id })
-      queueProfileSync()
-      closeLoadout(true)
-    })
-    loadoutCards.append(card)
+async function loadWeapons(): Promise<void> {
+  try {
+    const list = await api<WeaponInfo[]>('/api/weapons')
+    weapons.clear()
+    for (const info of list) weapons.set(info.id, info)
+  } catch {
+    // The welcome payload will fill this in after the match starts.
   }
 }
 
@@ -698,10 +854,26 @@ function updateMatchHud(match: MatchState, players: PlayerSnapshot[]): void {
       match.winner === 0 ? '蓝队胜利' : match.winner === 1 ? '橙队胜利' : match.winner === 2 ? '平局' : '对局结束'
     resultTitle.className = match.winner === 0 ? 'blue' : match.winner === 1 ? 'orange' : ''
     resultScore.textContent = `${match.score[0] ?? 0} : ${match.score[1] ?? 0}`
-    resultNext.textContent = `${Math.max(0, Math.ceil(match.countdown))}s 后开始新对局`
+    resultNext.textContent = '点击下方按钮返回大厅'
   } else {
     resultOverlay.classList.add('hidden')
   }
+}
+
+function enterResult(): void {
+  if (resultScreen) return
+  resultScreen = true
+  matching = false
+  started = false
+  input.fire = false
+  input.ads = false
+  if (reconnectTimer !== null) {
+    window.clearTimeout(reconnectTimer)
+    reconnectTimer = null
+  }
+  if (document.pointerLockElement) document.exitPointerLock()
+  overlay.classList.add('hidden')
+  net.close()
 }
 
 function renderTeamRows(el: HTMLDivElement, list: PlayerSnapshot[]): void {
@@ -818,6 +990,7 @@ net.onWelcome = (welcome: Welcome) => {
   hideDeath()
   deathOverlay.classList.add('hidden')
   resultOverlay.classList.add('hidden')
+  resultScreen = false
   loadoutEl.classList.add('hidden')
   scoreboard.classList.add('hidden')
   playButton.onclick = startGame
@@ -838,6 +1011,7 @@ net.onSnapshot = (snap: Snapshot) => {
   playersEl.textContent = `${snap.players.length}/8`
   if (snap.match) {
     updateMatchHud(snap.match, snap.players)
+    if (snap.match.state === 'ended') enterResult()
     if (scoreboardVisible) renderScoreboard(snap.players, snap.match)
   }
 
@@ -864,10 +1038,16 @@ net.onSnapshot = (snap: Snapshot) => {
   if (!initialized) {
     local = { x: me.x, y: me.y, z: me.z, vy: 0, onGround: me.y <= 0.001, yaw: local.yaw, pitch: local.pitch }
     initialized = true
+    matching = false
     reconnecting = false
     playButton.onclick = startGame
     if (spectate) {
       overlay.classList.add('hidden')
+    } else if (input.locked) {
+      // The start-match click already grabbed pointer lock.
+      started = true
+      overlay.classList.add('hidden')
+      sound.resume()
     } else {
       showOverlay('连接成功，点击进入战场', '进入战场')
     }
@@ -971,18 +1151,23 @@ net.onServerError = (err) => {
     showLogin('登录已失效，请重新进入')
     return
   }
+  matching = false
   reconnecting = true
+  if (document.pointerLockElement) document.exitPointerLock()
   showOverlay(`无法加入：${err.message}`, '重新连接')
   playButton.onclick = () => {
     reconnectAttempt = 0
     reconnecting = true
+    matching = true
+    requestLock(app)
     showOverlay('正在连接服务器…', '请稍候', true)
     net.connect(selectedLoadout)
   }
 }
 
 net.onClose = () => {
-  if (authBlocked) return
+  if (authBlocked || resultScreen) return
+  matching = false
   reconnecting = true
   if (document.pointerLockElement) document.exitPointerLock()
   scheduleReconnect()
@@ -1024,11 +1209,11 @@ function startGame(): void {
 playButton.onclick = startGame
 
 document.addEventListener('pointerlockchange', () => {
-  const locked = document.pointerLockElement === sceneView?.canvas
+  const locked = document.pointerLockElement !== null
   if (locked) {
-    overlay.classList.add('hidden')
+    if (!matching && initialized && !resultScreen) overlay.classList.add('hidden')
     sound.resume()
-  } else if (started && initialized && !spectate && !loadoutOpen && !reconnecting) {
+  } else if (started && initialized && !spectate && !loadoutOpen && !reconnecting && !resultScreen) {
     showOverlay('已暂停', '继续战斗')
   }
 })

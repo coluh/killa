@@ -274,7 +274,7 @@ func (r *Room) join(m joinReq) {
 		Team:     team,
 		TickRate: TickRate,
 		Map:      r.world.ProtoMap(),
-		Weapons:  weaponInfos(),
+		Weapons:  WeaponInfos(),
 	})
 	_ = m.peer.Send(r.snapshotFor(p, time.Now()))
 

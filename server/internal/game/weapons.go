@@ -58,7 +58,7 @@ func weaponByID(id string) Weapon {
 	return weaponTable[DefaultWeapon]
 }
 
-func weaponInfos() []protocol.Weapon {
+func WeaponInfos() []protocol.Weapon {
 	out := make([]protocol.Weapon, 0, len(weaponOrder))
 	for _, id := range weaponOrder {
 		w := weaponTable[id]

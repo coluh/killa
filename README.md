@@ -27,8 +27,10 @@ make dev-server
 make dev-client
 ```
 
-打开 http://localhost:5173 ，在登录框直接点「进入」（留空用户名即为游客），
-再点「进入战场」锁定鼠标即可。首次启动会在 `server/killa.db` 建库。
+打开 http://localhost:5173 ，在登录框直接点「进入」（留空用户名即为游客）。
+登录后进入大厅，可选武器、调灵敏度/音量，点「开始匹配」即直接进入战场。
+一局结束后停留在结算页，点「返回大厅」再开下一局。首次启动会在
+`server/killa.db` 建库。
 
 生产构建（单进程同时提供页面和 WebSocket）：
 
@@ -100,6 +102,7 @@ docs/             规则、架构、协议、账号、路线图
 - [x] ADS 红点镜、命中方块粒子、参考 myold/tdm 第一层重制的更大仓库图
 - [x] PUBG 数值同步：M416/UZI 伤害、2 级甲 40%、脱战回血；机器人进一步降智
 - [x] 账号系统：游客/用户名密码、HttpOnly 会话、SQLite 战绩与配装、档案页
+- [x] 大厅：登录后选武器/设置，点开始匹配直接进战场；结算页可返回大厅
   （接口与数据表见 [docs/account.md](docs/account.md)）
 - [x] 部署产物：Docker + Caddy + 压测工具 + 部署文档
 - [x] 部署到 manyblocks.online（ICP 备案 + Docker/Caddy/HTTPS）

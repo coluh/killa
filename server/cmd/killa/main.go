@@ -71,6 +71,11 @@ func main() {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		_, _ = w.Write([]byte("ok"))
 	})
+	mux.HandleFunc("GET /api/weapons", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.Header().Set("Cache-Control", "public, max-age=300")
+		_ = json.NewEncoder(w).Encode(game.WeaponInfos())
+	})
 	mux.HandleFunc("/status", func(w http.ResponseWriter, _ *http.Request) {
 		status := manager.Status()
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
