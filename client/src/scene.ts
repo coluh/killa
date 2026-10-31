@@ -9,6 +9,8 @@ interface Remote {
   yaw: number
   targetYaw: number
   alive: boolean
+  deathAt: number
+  deathDir: number
 }
 
 interface Tracer {
@@ -360,6 +362,7 @@ export class SceneView {
       this.viewmodel.position.z += (targetZ - this.viewmodel.position.z) * blend
     }
 
+    const nowSeconds = performance.now() / 1000
     const seen = new Set<string>()
     for (const player of players) {
       if (player.id === selfId) continue
@@ -374,6 +377,8 @@ export class SceneView {
           yaw: player.yaw,
           targetYaw: player.yaw,
           alive: player.alive,
+          deathAt: player.alive ? 0 : nowSeconds,
+          deathDir: Math.random() < 0.5 ? -1 : 1,
         }
         remote.group.visible = player.alive
         this.scene.add(remote.group)
@@ -385,9 +390,13 @@ export class SceneView {
         remote.target.set(player.x, player.y, player.z)
         remote.yaw = player.yaw
         remote.targetYaw = player.yaw
+        remote.group.rotation.z = 0
+      }
+      if (!player.alive && remote.alive) {
+        remote.deathAt = nowSeconds
+        remote.deathDir = Math.random() < 0.5 ? -1 : 1
       }
       remote.alive = player.alive
-      remote.group.visible = player.alive
       if (player.alive) {
         remote.target.set(player.x, player.y, player.z)
         remote.targetYaw = player.yaw
@@ -411,7 +420,18 @@ export class SceneView {
       const dx = remote.pos.x - this.camera.position.x
       const dy = remote.pos.y + 1 - this.camera.position.y
       const dz = remote.pos.z - this.camera.position.z
-      remote.group.visible = remote.alive && dx * dx + dy * dy + dz * dz > 0.5
+      const clear = dx * dx + dy * dy + dz * dz > 0.5
+
+      if (remote.alive) {
+        remote.group.rotation.z = 0
+        remote.group.visible = clear
+      } else {
+        const age = nowSeconds - remote.deathAt
+        const t = Math.min(1, age / 0.45)
+        const eased = 1 - (1 - t) * (1 - t)
+        remote.group.rotation.z = remote.deathDir * (Math.PI / 2) * eased
+        remote.group.visible = clear && age < 1.6
+      }
     }
 
     for (let i = this.impacts.length - 1; i >= 0; i--) {

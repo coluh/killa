@@ -406,3 +406,20 @@ func TestMatchResultIncludesProfiles(t *testing.T) {
 		}
 	}
 }
+
+func TestNoAdsWhileReloading(t *testing.T) {
+	room, p1, _ := newCombatRoom()
+	p1.Reloading = true
+	p1.State.Ads = true
+	p1.LastSeq = 0
+
+	room.applyInput(p1, protocol.Input{Type: "input", Seq: 1, Dt: 0.05, Ads: true})
+	if p1.State.Ads {
+		t.Fatal("ADS should be disabled while reloading")
+	}
+	p1.Reloading = false
+	room.applyInput(p1, protocol.Input{Type: "input", Seq: 2, Dt: 0.05, Ads: true})
+	if !p1.State.Ads {
+		t.Fatal("ADS should work after reload ends")
+	}
+}

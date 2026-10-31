@@ -67,6 +67,7 @@ const resultTitle = document.getElementById('resulttitle') as HTMLHeadingElement
 const resultScore = document.getElementById('resultscore') as HTMLParagraphElement
 const resultNext = document.getElementById('resultnext') as HTMLParagraphElement
 const resultLobbyBtn = document.getElementById('resultlobby') as HTMLButtonElement
+const resultTeams = document.getElementById('resultteams') as HTMLDivElement
 const scoreboard = document.getElementById('scoreboard') as HTMLDivElement
 const teamAEl = document.getElementById('teamA') as HTMLDivElement
 const teamBEl = document.getElementById('teamB') as HTMLDivElement
@@ -80,6 +81,8 @@ const ammoEl = document.getElementById('ammo') as HTMLSpanElement
 const magEl = document.getElementById('mag') as HTMLSpanElement
 const weaponName = document.getElementById('weaponname') as HTMLDivElement
 const reloadHint = document.getElementById('reloadhint') as HTMLDivElement
+const reloadTrack = document.getElementById('reloadtrack') as HTMLDivElement
+const reloadFill = document.getElementById('reloadfill') as HTMLDivElement
 const hurtEl = document.getElementById('hurt') as HTMLDivElement
 const loadoutEl = document.getElementById('loadout') as HTMLDivElement
 const loadoutCards = document.getElementById('loadoutcards') as HTMLDivElement
@@ -88,18 +91,12 @@ const sensInput = document.getElementById('sens') as HTMLInputElement
 const sensValue = document.getElementById('sensval') as HTMLOutputElement
 const volInput = document.getElementById('vol') as HTMLInputElement
 const volValue = document.getElementById('volval') as HTMLOutputElement
-const accountBtn = document.getElementById('accountbtn') as HTMLButtonElement
 const loginEl = document.getElementById('login') as HTMLDivElement
 const loginForm = document.getElementById('loginform') as HTMLFormElement
 const loginName = document.getElementById('loginname') as HTMLInputElement
 const loginPass = document.getElementById('loginpass') as HTMLInputElement
 const loginBtn = document.getElementById('loginbtn') as HTMLButtonElement
 const loginError = document.getElementById('loginerror') as HTMLParagraphElement
-const profileEl = document.getElementById('profile') as HTMLDivElement
-const profileClose = document.getElementById('profileclose') as HTMLButtonElement
-const profileName = document.getElementById('profilename') as HTMLHeadingElement
-const profileTag = document.getElementById('profiletag') as HTMLParagraphElement
-const profileStats = document.getElementById('profilestats') as HTMLDivElement
 const profileMatches = document.getElementById('profilematches') as HTMLDivElement
 const guestForm = document.getElementById('guestform') as HTMLDivElement
 const guestName = document.getElementById('guestname') as HTMLInputElement
@@ -122,8 +119,6 @@ const lobbySensValue = document.getElementById('lobbysensval') as HTMLOutputElem
 const lobbyVol = document.getElementById('lobbyvol') as HTMLInputElement
 const lobbyVolValue = document.getElementById('lobbyvolval') as HTMLOutputElement
 const startMatchBtn = document.getElementById('startmatch') as HTMLButtonElement
-const lobbyProfileBtn = document.getElementById('lobbyprofile') as HTMLButtonElement
-const lobbyLogoutBtn = document.getElementById('lobbylogout') as HTMLButtonElement
 const lobbyStatus = document.getElementById('lobbystatus') as HTMLParagraphElement
 
 const net = new Net()
@@ -158,7 +153,6 @@ let reconnectAttempt = 0
 let reconnectTimer: number | null = null
 let profile: Profile | null = null
 let authBlocked = false
-let profileOpen = false
 let syncTimer: number | null = null
 let matching = false
 let resultScreen = false
@@ -279,7 +273,6 @@ function setProfile(next: Profile): void {
   }
   profile = next
   authBlocked = false
-  accountBtn.classList.remove('hidden')
   loginEl.classList.add('hidden')
   if (typeof next.settings?.sens === 'number') applySensitivity(next.settings.sens)
   if (typeof next.settings?.vol === 'number') applyVolume(next.settings.vol)
@@ -317,6 +310,8 @@ function renderLobby(): void {
   lobbySensValue.textContent = sensValue.textContent
   lobbyVol.value = volInput.value
   lobbyVolValue.textContent = volValue.textContent
+  guestForm.classList.toggle('hidden', !profile.isGuest)
+  passForm.classList.toggle('hidden', profile.isGuest)
   startMatchBtn.disabled = false
   lobbyStatus.textContent = '4v4 · 40 杀 / 10 分钟 · 机器人补位'
 }
@@ -324,9 +319,12 @@ function renderLobby(): void {
 async function refreshLobbyProfile(): Promise<void> {
   if (!profile) return
   try {
-    const data = await api<{ profile: Profile }>('/api/me')
+    const data = await api<{ profile: Profile; recent: MatchRow[] }>('/api/me')
     profile = data.profile
-    if (!lobbyEl.classList.contains('hidden')) renderLobby()
+    if (!lobbyEl.classList.contains('hidden')) {
+      renderLobby()
+      renderMatches(data.recent ?? [])
+    }
   } catch (err) {
     if (err instanceof ApiError && err.status === 401) showLogin('登录已失效，请重新进入')
   }
@@ -343,16 +341,16 @@ function showLobby(): void {
   initialized = false
   started = false
   reconnecting = false
-  profileOpen = false
   if (document.pointerLockElement) document.exitPointerLock()
   lobbyEl.classList.remove('hidden')
   loginEl.classList.add('hidden')
-  profileEl.classList.add('hidden')
   overlay.classList.add('hidden')
   resultOverlay.classList.add('hidden')
   deathOverlay.classList.add('hidden')
   scoreboard.classList.add('hidden')
   loadoutEl.classList.add('hidden')
+  profileMsg.textContent = ''
+  profileMatches.textContent = '加载中…'
   renderLobby()
   window.setTimeout(() => {
     if (!lobbyEl.classList.contains('hidden')) void refreshLobbyProfile()
@@ -368,9 +366,6 @@ function showLogin(message = ''): void {
   matching = false
   resultScreen = false
   profile = null
-  profileOpen = false
-  accountBtn.classList.add('hidden')
-  profileEl.classList.add('hidden')
   lobbyEl.classList.add('hidden')
   resultOverlay.classList.add('hidden')
   loginEl.classList.remove('hidden')
@@ -453,40 +448,6 @@ async function pushProfile(): Promise<void> {
   }
 }
 
-function stat(label: string, value: number | string): HTMLDivElement {
-  const box = document.createElement('div')
-  box.className = 'pstat'
-  const b = document.createElement('b')
-  b.textContent = String(value)
-  const span = document.createElement('span')
-  span.textContent = label
-  box.append(b, span)
-  return box
-}
-
-function renderProfile(): void {
-  if (!profile) return
-  profileName.textContent = profile.displayName
-  profileTag.textContent = profile.isGuest
-    ? '游客 · 本机会话免登录；绑定账号后可跨设备'
-    : `账号 · ${profile.username}`
-
-  const s = profile.stats
-  const rate = s.matches > 0 ? `${Math.round((s.wins / s.matches) * 100)}%` : '—'
-  profileStats.replaceChildren(
-    stat('击杀', s.kills),
-    stat('死亡', s.deaths),
-    stat('助攻', s.assists),
-    stat('场次', s.matches),
-    stat('胜率', rate),
-    stat('伤害', s.damage),
-  )
-
-  guestForm.classList.toggle('hidden', !profile.isGuest)
-  passForm.classList.toggle('hidden', profile.isGuest)
-  profileMsg.textContent = ''
-}
-
 function renderMatches(rows: MatchRow[]): void {
   profileMatches.replaceChildren()
   if (rows.length === 0) {
@@ -512,42 +473,6 @@ function renderMatches(rows: MatchRow[]): void {
   }
 }
 
-async function openProfile(): Promise<void> {
-  if (!profile) return
-  profileOpen = true
-  if (document.pointerLockElement) document.exitPointerLock()
-  profileEl.classList.remove('hidden')
-  renderProfile()
-  profileMatches.textContent = '加载中…'
-  try {
-    const data = await api<{ profile: Profile; recent: MatchRow[] }>('/api/me')
-    profile = data.profile
-    renderProfile()
-    renderMatches(data.recent ?? [])
-  } catch (err) {
-    if (err instanceof ApiError && err.status === 401) {
-      showLogin('登录已失效，请重新进入')
-      return
-    }
-    profileMatches.textContent = '读取战绩失败'
-  }
-}
-
-function closeProfile(): void {
-  profileOpen = false
-  profileEl.classList.add('hidden')
-  if (!lobbyEl.classList.contains('hidden')) {
-    renderLobby()
-    return
-  }
-  if (started && initialized && !reconnecting && !spectate) {
-    showOverlay('已暂停', '继续战斗')
-  }
-}
-
-accountBtn.addEventListener('click', () => void openProfile())
-profileClose.addEventListener('click', closeProfile)
-
 startMatchBtn.addEventListener('click', () => {
   if (!profile) return
   startMatchBtn.disabled = true
@@ -558,17 +483,6 @@ startMatchBtn.addEventListener('click', () => {
   // Ask for pointer lock while the click still counts as a user gesture.
   requestLock(app)
   connectGame('正在匹配…')
-})
-
-lobbyProfileBtn.addEventListener('click', () => void openProfile())
-
-lobbyLogoutBtn.addEventListener('click', async () => {
-  try {
-    await api('/api/auth/logout', { method: 'POST' })
-  } catch {
-    // clear the local state even if the request failed
-  }
-  showLogin('已退出登录')
 })
 
 resultLobbyBtn.addEventListener('click', () => {
@@ -587,7 +501,7 @@ guestBtn.addEventListener('click', async () => {
     })
     profile = data.profile
     guestPass.value = ''
-    renderProfile()
+    renderLobby()
     profileMsg.style.color = 'var(--cyan)'
     profileMsg.textContent = '绑定成功，现在可以在其他设备登录'
   } catch (err) {
@@ -645,17 +559,6 @@ deleteBtn.addEventListener('click', async () => {
   }
 })
 
-document.addEventListener('keydown', (event) => {
-  if (event.code === 'Escape' && profileOpen) {
-    event.preventDefault()
-    closeProfile()
-    return
-  }
-  if (event.code !== 'KeyP' || !initialized || profileOpen) return
-  event.preventDefault()
-  void openProfile()
-})
-
 function requestLock(target?: HTMLElement): void {
   const el = target ?? sceneView?.canvas ?? app
   const result = el.requestPointerLock() as unknown
@@ -692,6 +595,18 @@ function updateWeapon(me: PlayerSnapshot): void {
   }
   ammoEl.textContent = String(me.ammo)
   reloadHint.classList.toggle('hidden', !me.reloading)
+  reloadTrack.classList.toggle('hidden', !me.reloading)
+  input.setAdsAllowed(!me.reloading)
+  if (me.reloading) {
+    const remaining = Math.max(0, me.reloadIn)
+    reloadHint.textContent = `换弹中 ${remaining.toFixed(1)}s`
+    const total = Math.max(0.1, (myWeapon?.reloadMs ?? 1800) / 1000)
+    reloadFill.style.width = `${Math.min(100, Math.max(0, (1 - remaining / total) * 100))}%`
+    input.ads = false
+  } else {
+    reloadHint.textContent = '换弹中…'
+    reloadFill.style.width = '0%'
+  }
 }
 
 function flashHurt(): void {
@@ -855,8 +770,52 @@ function updateMatchHud(match: MatchState, players: PlayerSnapshot[]): void {
     resultTitle.className = match.winner === 0 ? 'blue' : match.winner === 1 ? 'orange' : ''
     resultScore.textContent = `${match.score[0] ?? 0} : ${match.score[1] ?? 0}`
     resultNext.textContent = '点击下方按钮返回大厅'
+    renderResultTeams(players)
   } else {
     resultOverlay.classList.add('hidden')
+    resultTeams.replaceChildren()
+  }
+}
+
+function renderResultTeams(players: PlayerSnapshot[]): void {
+  const mvp = [...players].sort(
+    (a, b) => b.kills - a.kills || b.assists - a.assists || a.deaths - b.deaths,
+  )[0]?.id
+
+  resultTeams.replaceChildren()
+  for (const team of [0, 1]) {
+    const column = document.createElement('div')
+    column.className = `result-team ${team === 0 ? 'blue' : 'orange'}`
+    const title = document.createElement('h4')
+    title.textContent = team === 0 ? '蓝队' : '橙队'
+    column.append(title)
+
+    const list = players.filter((p) => p.team === team).sort(
+      (a, b) => b.kills - a.kills || a.deaths - b.deaths || a.name.localeCompare(b.name),
+    )
+    for (const player of list) {
+      const row = document.createElement('div')
+      row.className = 'result-row'
+      if (player.id === selfId) row.classList.add('self')
+      if (player.id === mvp) row.classList.add('mvp')
+
+      const name = document.createElement('span')
+      name.textContent = player.id === selfId ? `${player.name}（你）` : player.name
+      if (player.id === mvp) {
+        const badge = document.createElement('span')
+        badge.className = 'badge'
+        badge.textContent = 'MVP'
+        name.append(badge)
+      }
+
+      const kda = document.createElement('span')
+      kda.className = 'kda'
+      kda.textContent = `${player.kills}/${player.deaths}/${player.assists}`
+
+      row.append(name, kda)
+      column.append(row)
+    }
+    resultTeams.append(column)
   }
 }
 

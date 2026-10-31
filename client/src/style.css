@@ -372,7 +372,7 @@ body {
 
 .result-card {
   pointer-events: auto;
-  min-width: min(420px, 86vw);
+  width: min(720px, 94vw);
   padding: 26px 44px;
   text-align: center;
   border: 1px solid rgba(76, 201, 240, 0.35);
@@ -942,30 +942,6 @@ body {
   opacity: 0;
 }
 
-#accountbtn {
-  position: fixed;
-  top: 52px;
-  right: 24px;
-  z-index: 15;
-  pointer-events: auto;
-  padding: 3px 8px;
-  border: 1px solid rgba(76, 201, 240, 0.35);
-  background: rgba(8, 12, 18, 0.55);
-  color: var(--cyan);
-  font: inherit;
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  cursor: pointer;
-}
-
-#accountbtn:hover {
-  background: rgba(76, 201, 240, 0.12);
-}
-
-#accountbtn.hidden {
-  display: none;
-}
-
 #login,
 #profile {
   position: fixed;
@@ -1360,4 +1336,392 @@ body {
 
 .result-button:hover {
   background: rgba(76, 201, 240, 0.24);
+}
+
+.reloadtrack {
+  width: 100%;
+  height: 3px;
+  margin-top: 4px;
+  background: rgba(139, 152, 173, 0.22);
+}
+
+.reloadfill {
+  width: 0;
+  height: 100%;
+  background: var(--cyan);
+  transition: width 0.08s linear;
+}
+
+.reloadtrack.hidden {
+  display: none;
+}
+
+.result-teams {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 16px;
+  text-align: left;
+}
+
+.result-team {
+  border: 1px solid rgba(139, 152, 173, 0.18);
+  background: rgba(5, 8, 13, 0.45);
+  padding: 8px 10px;
+}
+
+.result-team h4 {
+  margin: 0 0 6px;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}
+
+.result-team.blue h4 {
+  color: var(--cyan);
+}
+
+.result-team.orange h4 {
+  color: var(--orange);
+}
+
+.result-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  padding: 3px 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.result-row.self {
+  color: var(--text);
+}
+
+.result-row.mvp {
+  color: var(--cyan);
+}
+
+.result-row .kda {
+  font-variant-numeric: tabular-nums;
+}
+
+.result-row .badge {
+  margin-left: 4px;
+  padding: 0 4px;
+  border: 1px solid currentColor;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+}
+
+#lobby {
+  display: block;
+  padding: 0;
+  overflow: auto;
+}
+
+.lobby-shell {
+  width: 100%;
+  min-height: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(340px, 0.65fr);
+}
+
+.lobby-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 34px 42px 28px;
+  overflow: auto;
+}
+
+.lobby-side {
+  min-width: 0;
+  padding: 34px 28px;
+  overflow: auto;
+  border-left: 1px solid rgba(139, 152, 173, 0.16);
+  background: rgba(5, 8, 13, 0.45);
+}
+
+.lobby-main h2 {
+  margin: 0;
+  font-size: 34px;
+  letter-spacing: 0.04em;
+  color: var(--text);
+}
+
+.lobby-main .sub {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.lobby-main h3,
+.lobby-side h3 {
+  margin: 24px 0 8px;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  color: var(--muted);
+}
+
+.lobby-side h3:first-child {
+  margin-top: 0;
+}
+
+.lobby-main .lobby-weapons {
+  margin: 0;
+  max-width: 640px;
+}
+
+.lobby-main .startmatch {
+  margin-top: auto;
+  max-width: 640px;
+}
+
+.lobby-main .status {
+  max-width: 640px;
+}
+
+.lobby-side .matches {
+  max-height: 280px;
+  margin-bottom: 16px;
+}
+
+.lobby-side .account-form {
+  margin-top: 18px;
+}
+
+.lobby-side .profile-actions {
+  margin-top: 16px;
+}
+
+.lobby-side .form-error {
+  margin-top: 4px;
+}
+
+@media (max-width: 900px) {
+  .lobby-shell {
+    grid-template-columns: 1fr;
+    min-height: 0;
+  }
+
+  .lobby-main {
+    padding: 24px 20px;
+  }
+
+  .lobby-side {
+    border-left: 0;
+    border-top: 1px solid rgba(139, 152, 173, 0.16);
+    padding: 24px 20px;
+  }
+
+  .lobby-main .startmatch {
+    margin-top: 22px;
+  }
+}
+
+.side-kicker {
+  margin: 0 0 14px;
+  font-size: 11px;
+  letter-spacing: 0.28em;
+  color: var(--muted);
+}
+
+/* Lobby: profile on the left, loadout and matchmaking on the right. */
+.lobby-shell {
+  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+}
+
+.lobby-side {
+  border-left: 0;
+  border-right: 1px solid rgba(139, 152, 173, 0.16);
+  background: rgba(5, 8, 13, 0.62);
+}
+
+.lobby-main {
+  padding: 42px 48px 32px;
+}
+
+.lobby-side h2 {
+  margin: 0;
+  font-size: 30px;
+  letter-spacing: 0.03em;
+  color: var(--text);
+}
+
+.lobby-side .sub {
+  margin: 5px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.lobby-side .lobby-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 18px;
+  padding: 0;
+}
+
+.lobby-side .lobby-stats b {
+  text-align: left;
+  font-size: 20px;
+}
+
+.lobby-side .lobby-stats span {
+  text-align: left;
+}
+
+.lobby-side .side-kicker {
+  margin-bottom: 16px;
+}
+
+.lobby-main .kicker {
+  margin: 0 0 10px;
+}
+
+.lobby-title {
+  margin: 0;
+  font-size: 44px;
+  line-height: 1.05;
+  letter-spacing: 0.02em;
+  color: var(--text);
+}
+
+.lobby-lead {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.lobby-main h3 {
+  margin: 30px 0 10px;
+}
+
+.lobby-main .lobby-weapons {
+  max-width: 760px;
+}
+
+.lobby-main .lobby-settings {
+  max-width: 760px;
+  margin-top: 22px;
+}
+
+.lobby-main .startmatch {
+  max-width: 760px;
+  margin-top: 26px;
+}
+
+.lobby-main .status {
+  max-width: 760px;
+  margin: 14px 0 0;
+  text-align: left;
+}
+
+@media (max-width: 900px) {
+  .lobby-side {
+    border-right: 0;
+    border-bottom: 1px solid rgba(139, 152, 173, 0.16);
+  }
+
+  .lobby-main {
+    padding: 26px 20px;
+  }
+
+  .lobby-title {
+    font-size: 34px;
+  }
+}
+
+/* Fill the viewport: profile column scrolls its match list, CTA sits bottom-right. */
+#lobby {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.lobby-shell {
+  height: 100%;
+  min-height: 0;
+}
+
+.lobby-side {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.lobby-side .matches {
+  flex: 1 1 auto;
+  min-height: 80px;
+  max-height: none;
+  overflow: auto;
+}
+
+.lobby-side .account-form,
+.lobby-side .profile-actions,
+.lobby-side .form-error {
+  flex: 0 0 auto;
+}
+
+.lobby-main {
+  height: 100%;
+  overflow: auto;
+}
+
+.lobby-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-top: auto;
+  padding-top: 28px;
+}
+
+.lobby-footer .status {
+  margin: 0;
+  max-width: none;
+  text-align: left;
+}
+
+.lobby-footer .startmatch {
+  width: min(360px, 46%);
+  max-width: none;
+  margin: 0;
+  padding: 17px 26px;
+  font-size: 17px;
+}
+
+@media (max-width: 900px) {
+  #lobby {
+    height: auto;
+    min-height: 100dvh;
+    overflow: auto;
+  }
+
+  .lobby-shell {
+    height: auto;
+    min-height: 100dvh;
+  }
+
+  .lobby-side,
+  .lobby-main {
+    height: auto;
+    overflow: visible;
+  }
+
+  .lobby-side .matches {
+    max-height: 260px;
+  }
+
+  .lobby-footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+  }
+
+  .lobby-footer .startmatch {
+    width: 100%;
+  }
 }

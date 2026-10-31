@@ -9,6 +9,8 @@ export class Input {
   jump = false
   fire = false
   ads = false
+  adsAllowed = true
+  private rightHeld = false
   sensitivity = 0.0022
 
   constructor() {
@@ -37,13 +39,17 @@ export class Input {
       if (event.button === 0) this.fire = true
       if (event.button === 2) {
         event.preventDefault()
-        this.ads = true
+        this.rightHeld = true
+        if (this.adsAllowed) this.ads = true
       }
     })
 
     document.addEventListener('mouseup', (event) => {
       if (event.button === 0) this.fire = false
-      if (event.button === 2) this.ads = false
+      if (event.button === 2) {
+        this.rightHeld = false
+        this.ads = false
+      }
     })
 
     document.addEventListener('contextmenu', (event) => {
@@ -56,6 +62,7 @@ export class Input {
         this.keys.clear()
         this.fire = false
         this.ads = false
+        this.rightHeld = false
       }
     })
 
@@ -63,6 +70,7 @@ export class Input {
       this.keys.clear()
       this.fire = false
       this.ads = false
+      this.rightHeld = false
     })
   }
 
@@ -90,5 +98,14 @@ export class Input {
 
   setSensitivity(value: number): void {
     this.sensitivity = value
+  }
+
+  setAdsAllowed(allowed: boolean): void {
+    this.adsAllowed = allowed
+    if (!allowed) {
+      this.ads = false
+    } else if (this.rightHeld && this.locked) {
+      this.ads = true
+    }
   }
 }

@@ -383,6 +383,10 @@ func (r *Room) applyInput(p *Player, in protocol.Input) {
 		p.RTT = time.Duration(clamp(in.RTT, 0, 250) * float64(time.Millisecond))
 	}
 
+	if p.Reloading {
+		in.Ads = false
+	}
+
 	in.Forward = clamp(in.Forward, -1, 1)
 	in.Right = clamp(in.Right, -1, 1)
 	p.LastSeq = in.Seq
@@ -569,6 +573,7 @@ func (r *Room) startReload(p *Player, now time.Time) {
 	}
 	p.Reloading = true
 	p.ReloadEnds = now.Add(w.ReloadTime)
+	p.State.Ads = false
 }
 
 // regen restores health after a few seconds without taking damage.

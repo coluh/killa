@@ -15,7 +15,6 @@
   <body>
     <div id="app"></div>
 
-    <button id="accountbtn" class="hidden" type="button">档案</button>
     <div id="crosshair"></div>
     <div id="ads-scope" class="hidden">
       <div class="scope-ring"></div>
@@ -66,11 +65,12 @@
         <div id="weaponname" class="wname">M416</div>
         <div class="wammo"><span id="ammo">30</span><span class="wsep">/</span><span id="mag">30</span></div>
         <div id="reloadhint" class="reloadhint hidden">换弹中…</div>
+        <div id="reloadtrack" class="reloadtrack hidden"><div id="reloadfill" class="reloadfill"></div></div>
       </div>
       <div id="killfeed"></div>
       <div id="countdown" class="hidden"></div>
       <div class="hud-bottom">
-        WASD 移动 · Shift 疾跑 · Space 跳跃 · 左键开火 · 右键开镜 · R 换弹 · B 配装 · P 档案 · Esc 释放鼠标
+        WASD 移动 · Shift 疾跑 · Space 跳跃 · 左键开火 · 右键开镜 · R 换弹 · B 配装 · Esc 释放鼠标
       </div>
     </div>
 
@@ -92,6 +92,7 @@
         <h2 id="resulttitle"></h2>
         <p id="resultscore" class="result-score"></p>
         <p id="resultnext" class="result-next"></p>
+        <div id="resultteams" class="result-teams"></div>
         <button id="resultlobby" class="result-button" type="button">返回大厅</button>
       </div>
     </div>
@@ -132,72 +133,68 @@
           <button id="loginbtn" type="submit">进入</button>
         </form>
         <p id="loginerror" class="form-error"></p>
-        <p class="hint">游客可稍后在档案页绑定用户名和密码</p>
+        <p class="hint">游客可稍后在大厅档案栏绑定用户名和密码</p>
       </div>
     </div>
 
     <div id="lobby" class="hidden">
-      <div class="lobby-card">
-        <p class="kicker">KILLA · 大厅</p>
-        <div class="lobby-head">
-          <div>
-            <h2 id="lobbyname">—</h2>
-            <p id="lobbytag" class="sub"></p>
-          </div>
+      <div class="lobby-shell">
+        <aside class="lobby-side">
+          <p class="side-kicker">档案</p>
+          <h2 id="lobbyname">—</h2>
+          <p id="lobbytag" class="sub"></p>
           <div id="lobbystats" class="lobby-stats"></div>
-        </div>
 
-        <h3>主武器</h3>
-        <div id="lobbyweapons" class="cards lobby-weapons"></div>
+          <h3>最近对局</h3>
+          <div id="profilematches" class="matches"></div>
 
-        <div class="lobby-settings">
-          <label>
-            <span>鼠标灵敏度</span>
-            <input id="lobbysens" type="range" min="0.4" max="2.2" step="0.05" value="1" />
-            <output id="lobbysensval">1.00</output>
-          </label>
-          <label>
-            <span>音量</span>
-            <input id="lobbyvol" type="range" min="0" max="1" step="0.01" value="0.8" />
-            <output id="lobbyvolval">80%</output>
-          </label>
-        </div>
+          <div id="guestform" class="account-form hidden">
+            <h3>绑定账号</h3>
+            <input id="guestname" maxlength="16" placeholder="用户名：字母数字下划线，2–16 位" autocomplete="username" />
+            <input id="guestpass" type="password" maxlength="128" placeholder="密码：至少 8 位" autocomplete="new-password" />
+            <button id="guestbtn" type="button">绑定</button>
+          </div>
 
-        <button id="startmatch" class="startmatch" type="button">开始匹配</button>
-        <div class="lobby-actions">
-          <button id="lobbyprofile" type="button">档案</button>
-          <button id="lobbylogout" type="button">退出登录</button>
-        </div>
-        <p id="lobbystatus" class="status">4v4 · 40 杀 / 10 分钟 · 机器人补位</p>
-      </div>
-    </div>
+          <div id="passform" class="account-form hidden">
+            <h3>修改密码</h3>
+            <input id="curpass" type="password" maxlength="128" placeholder="当前密码" autocomplete="current-password" />
+            <input id="newpass" type="password" maxlength="128" placeholder="新密码：至少 8 位" autocomplete="new-password" />
+            <button id="passbtn" type="button">修改密码</button>
+          </div>
 
-    <div id="profile" class="hidden">
-      <div class="profile-card">
-        <button id="profileclose" class="close" type="button" aria-label="关闭">×</button>
-        <p class="kicker">档案</p>
-        <h2 id="profilename">—</h2>
-        <p id="profiletag" class="sub"></p>
-        <div class="profile-actions">
-          <button id="logoutbtn" type="button">退出登录</button>
-          <button id="deletebtn" type="button" class="danger">删除账号</button>
-        </div>
-        <div id="profilestats" class="pstats"></div>
-        <h3>最近对局</h3>
-        <div id="profilematches" class="matches"></div>
-        <div id="guestform" class="account-form hidden">
-          <h3>绑定账号</h3>
-          <input id="guestname" maxlength="16" placeholder="用户名：字母数字下划线，2–16 位" autocomplete="username" />
-          <input id="guestpass" type="password" maxlength="128" placeholder="密码：至少 8 位" autocomplete="new-password" />
-          <button id="guestbtn" type="button">绑定</button>
-        </div>
-        <div id="passform" class="account-form hidden">
-          <h3>修改密码</h3>
-          <input id="curpass" type="password" maxlength="128" placeholder="当前密码" autocomplete="current-password" />
-          <input id="newpass" type="password" maxlength="128" placeholder="新密码：至少 8 位" autocomplete="new-password" />
-          <button id="passbtn" type="button">修改密码</button>
-        </div>
-        <p id="profilemsg" class="form-error"></p>
+          <p id="profilemsg" class="form-error"></p>
+          <div class="profile-actions">
+            <button id="logoutbtn" type="button">退出登录</button>
+            <button id="deletebtn" type="button" class="danger">删除账号</button>
+          </div>
+        </aside>
+
+        <section class="lobby-main">
+          <p class="kicker">KILLA · 大厅</p>
+          <h1 class="lobby-title">准备战斗</h1>
+          <p class="lobby-lead">选择主武器与手感设置，然后开始 4v4 匹配。</p>
+
+          <h3>主武器</h3>
+          <div id="lobbyweapons" class="cards lobby-weapons"></div>
+
+          <div class="lobby-settings">
+            <label>
+              <span>鼠标灵敏度</span>
+              <input id="lobbysens" type="range" min="0.4" max="2.2" step="0.05" value="1" />
+              <output id="lobbysensval">1.00</output>
+            </label>
+            <label>
+              <span>音量</span>
+              <input id="lobbyvol" type="range" min="0" max="1" step="0.01" value="0.8" />
+              <output id="lobbyvolval">80%</output>
+            </label>
+          </div>
+
+          <div class="lobby-footer">
+            <p id="lobbystatus" class="status">4v4 · 40 杀 / 10 分钟 · 机器人补位</p>
+            <button id="startmatch" class="startmatch" type="button">开始匹配</button>
+          </div>
+        </section>
       </div>
     </div>
 
@@ -214,7 +211,6 @@
           <li><kbd>R</kbd> 换弹</li>
           <li><kbd>Space</kbd> 跳跃</li>
           <li><kbd>B</kbd> 配装</li>
-          <li><kbd>P</kbd> 档案</li>
           <li><kbd>鼠标</kbd> 视角</li>
           <li><kbd>Esc</kbd> 释放鼠标</li>
         </ul>
