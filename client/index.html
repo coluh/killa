@@ -15,6 +15,7 @@
   <body>
     <div id="app"></div>
 
+    <button id="accountbtn" class="hidden" type="button">档案</button>
     <div id="crosshair"></div>
     <div id="ads-scope" class="hidden">
       <div class="scope-ring"></div>
@@ -69,7 +70,7 @@
       <div id="killfeed"></div>
       <div id="countdown" class="hidden"></div>
       <div class="hud-bottom">
-        WASD 移动 · Shift 疾跑 · Space 跳跃 · 左键开火 · 右键开镜 · R 换弹 · B 配装 · Esc 释放鼠标
+        WASD 移动 · Shift 疾跑 · Space 跳跃 · 左键开火 · 右键开镜 · R 换弹 · B 配装 · P 档案 · Esc 释放鼠标
       </div>
     </div>
 
@@ -119,6 +120,50 @@
       </div>
     </div>
 
+    <div id="login" class="hidden">
+      <div class="login-card">
+        <p class="kicker">KILLA</p>
+        <h2>进入游戏</h2>
+        <p class="sub">用户名留空 = 随机游客；新用户名自动注册，已有账号输入密码登录</p>
+        <form id="loginform">
+          <input id="loginname" maxlength="16" placeholder="用户名（可选）" autocomplete="username" />
+          <input id="loginpass" type="password" maxlength="128" placeholder="密码（注册 / 登录）" autocomplete="current-password" />
+          <button id="loginbtn" type="submit">进入</button>
+        </form>
+        <p id="loginerror" class="form-error"></p>
+        <p class="hint">游客可稍后在档案页绑定用户名和密码</p>
+      </div>
+    </div>
+
+    <div id="profile" class="hidden">
+      <div class="profile-card">
+        <button id="profileclose" class="close" type="button" aria-label="关闭">×</button>
+        <p class="kicker">档案</p>
+        <h2 id="profilename">—</h2>
+        <p id="profiletag" class="sub"></p>
+        <div class="profile-actions">
+          <button id="logoutbtn" type="button">退出登录</button>
+          <button id="deletebtn" type="button" class="danger">删除账号</button>
+        </div>
+        <div id="profilestats" class="pstats"></div>
+        <h3>最近对局</h3>
+        <div id="profilematches" class="matches"></div>
+        <div id="guestform" class="account-form hidden">
+          <h3>绑定账号</h3>
+          <input id="guestname" maxlength="16" placeholder="用户名：字母数字下划线，2–16 位" autocomplete="username" />
+          <input id="guestpass" type="password" maxlength="128" placeholder="密码：至少 8 位" autocomplete="new-password" />
+          <button id="guestbtn" type="button">绑定</button>
+        </div>
+        <div id="passform" class="account-form hidden">
+          <h3>修改密码</h3>
+          <input id="curpass" type="password" maxlength="128" placeholder="当前密码" autocomplete="current-password" />
+          <input id="newpass" type="password" maxlength="128" placeholder="新密码：至少 8 位" autocomplete="new-password" />
+          <button id="passbtn" type="button">修改密码</button>
+        </div>
+        <p id="profilemsg" class="form-error"></p>
+      </div>
+    </div>
+
     <div id="overlay">
       <div class="panel">
         <h1>KILLA</h1>
@@ -132,6 +177,7 @@
           <li><kbd>R</kbd> 换弹</li>
           <li><kbd>Space</kbd> 跳跃</li>
           <li><kbd>B</kbd> 配装</li>
+          <li><kbd>P</kbd> 档案</li>
           <li><kbd>鼠标</kbd> 视角</li>
           <li><kbd>Esc</kbd> 释放鼠标</li>
         </ul>

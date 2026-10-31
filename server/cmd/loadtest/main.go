@@ -7,8 +7,10 @@ import (
 	"flag"
 	"fmt"
 	"math/rand"
+	"net/http"
 	"os"
 	"sort"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -58,8 +60,15 @@ func main() {
 }
 
 func run(url string, idx int, duration time.Duration, rate int, col *collector) error {
+	cookie, err := guestCookie(url)
+	if err != nil {
+		return err
+	}
+	header := http.Header{}
+	header.Set("Cookie", cookie)
+
 	dialer := websocket.Dialer{HandshakeTimeout: 5 * time.Second}
-	conn, _, err := dialer.Dial(url, nil)
+	conn, _, err := dialer.Dial(url, header)
 	if err != nil {
 		return err
 	}
@@ -182,4 +191,24 @@ func report(col *collector, clients int, elapsed time.Duration) {
 	if errs > 0 {
 		os.Exit(1)
 	}
+}
+
+func guestCookie(wsURL string) (string, error) {
+	base := strings.Replace(wsURL, "ws://", "http://", 1)
+	base = strings.Replace(base, "wss://", "https://", 1)
+	base = strings.TrimSuffix(base, "/ws") + "/api/auth"
+
+	resp, err := http.Post(base, "application/json", strings.NewReader("{}"))
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("auth status %d", resp.StatusCode)
+	}
+	cookies := resp.Cookies()
+	if len(cookies) == 0 {
+		return "", fmt.Errorf("auth returned no cookie")
+	}
+	return cookies[0].String(), nil
 }

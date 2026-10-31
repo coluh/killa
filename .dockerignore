@@ -7,3 +7,6 @@ client/dist
 server/killa
 docs
 *.log
+*.db
+*.db-wal
+*.db-shm

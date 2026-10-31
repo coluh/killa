@@ -176,8 +176,12 @@ func (r *Room) applyShot(p *Player, yaw, pitch float64, now time.Time) {
 		best.LastDamaged = now
 		damage = applyArmor(best, damage, headshot)
 		best.HP -= damage
+		p.Damage += damage
 		if best.HP <= 0 {
 			best.HP = 0
+			if headshot {
+				p.Headshots++
+			}
 			r.kill(p, best, now)
 		}
 	}

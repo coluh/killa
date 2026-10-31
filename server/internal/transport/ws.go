@@ -13,8 +13,10 @@ import (
 
 	"github.com/gorilla/websocket"
 
+	"killa/server/internal/account"
 	"killa/server/internal/game"
 	"killa/server/internal/protocol"
+	"killa/server/internal/store"
 )
 
 var errConnClosed = errors.New("connection closed")
@@ -32,12 +34,28 @@ type Joiner interface {
 	Join(peer game.Peer, name string, weapon ...string) (*game.Room, error)
 }
 
+// ProfileJoiner is implemented by managers that can attach an account profile.
+type ProfileJoiner interface {
+	JoinProfile(peer game.Peer, name, weapon, profileID string) (*game.Room, error)
+}
+
+// SessionResolver maps a session cookie to a profile.
+type SessionResolver interface {
+	Resolve(token string) (*store.Profile, error)
+}
+
 // Server upgrades HTTP requests to WebSocket connections and feeds a room.
 type Server struct {
 	joiner   Joiner
 	allowed  []string
 	upgrader websocket.Upgrader
 	conns    chan struct{}
+	sessions SessionResolver
+}
+
+// SetSessionResolver enables cookie-based account authentication for WS joins.
+func (s *Server) SetSessionResolver(resolver SessionResolver) {
+	s.sessions = resolver
 }
 
 func NewServer(joiner Joiner, allowedOrigins []string) *Server {
@@ -84,7 +102,41 @@ func (s *Server) HandleWS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	room, err := s.joiner.Join(conn, join.Name, join.Weapon)
+	name := join.Name
+	weapon := join.Weapon
+	profileID := ""
+	if s.sessions != nil {
+		cookie, err := r.Cookie(account.CookieName)
+		if err != nil {
+			_ = conn.SendReliable(protocol.Error{Type: "error", Message: "请先登录"})
+			time.Sleep(50 * time.Millisecond)
+			_ = conn.Close()
+			return
+		}
+		profile, err := s.sessions.Resolve(cookie.Value)
+		if err != nil {
+			_ = conn.SendReliable(protocol.Error{Type: "error", Message: "登录已失效"})
+			time.Sleep(50 * time.Millisecond)
+			_ = conn.Close()
+			return
+		}
+		profileID = profile.ID
+		name = profile.DisplayName
+		if profile.Loadout != "" {
+			weapon = profile.Loadout
+		}
+	}
+
+	var room *game.Room
+	if profileID != "" {
+		if pj, ok := s.joiner.(ProfileJoiner); ok {
+			room, err = pj.JoinProfile(conn, name, weapon, profileID)
+		} else {
+			room, err = s.joiner.Join(conn, name, weapon)
+		}
+	} else {
+		room, err = s.joiner.Join(conn, name, weapon)
+	}
 	if err != nil {
 		log.Printf("killa: join rejected: %v", err)
 		_ = conn.SendReliable(protocol.Error{Type: "error", Message: err.Error()})

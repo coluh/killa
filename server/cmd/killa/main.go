@@ -14,7 +14,9 @@ import (
 	"syscall"
 	"time"
 
+	"killa/server/internal/account"
 	"killa/server/internal/game"
+	"killa/server/internal/store"
 	"killa/server/internal/transport"
 )
 
@@ -27,6 +29,7 @@ func main() {
 	bots := flag.Bool("bots", true, "fill empty slots with bots")
 	maxRooms := flag.Int("rooms", 16, "maximum concurrent rooms")
 	mapName := flag.String("map", "reference", "map: reference (imported blockout) or classic")
+	dbPath := flag.String("db", envOr("KILLA_DB", "./killa.db"), "sqlite database path")
 	flag.Parse()
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -40,7 +43,26 @@ func main() {
 	manager.SetRules(time.Duration(*matchSeconds)*time.Second, *scoreLimit)
 	manager.SetAutoBots(*bots)
 
+	st, err := store.Open(*dbPath)
+	if err != nil {
+		log.Fatalf("killa: open database: %v", err)
+	}
+	defer st.Close()
+
+	accounts := account.New(st)
+	matches := make(chan game.MatchResult, 64)
+	go recordMatches(matches, st)
+
+	manager.SetMatchRecorder(func(result game.MatchResult) {
+		select {
+		case matches <- result:
+		default:
+			log.Printf("killa: match write queue full, dropping %s", result.ID)
+		}
+	})
+
 	ws := transport.NewServer(manager, splitOrigins(*origins))
+	ws.SetSessionResolver(accounts)
 
 	started := time.Now()
 
@@ -58,6 +80,10 @@ func main() {
 			"players":       status.Players,
 			"uptimeSeconds": int(time.Since(started).Seconds()),
 		})
+	})
+	accounts.Register(mux)
+	mux.HandleFunc("/api/", func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, "not found", http.StatusNotFound)
 	})
 	mux.HandleFunc("/ws", ws.HandleWS)
 	mux.Handle("/", staticHandler(*staticDir))
@@ -77,7 +103,7 @@ func main() {
 		_ = srv.Shutdown(shutdownCtx)
 	}()
 
-	log.Printf("killa: listening on %s (static=%q, rooms=%d, map=%s)", *addr, *staticDir, *maxRooms, *mapName)
+	log.Printf("killa: listening on %s (static=%q, rooms=%d, map=%s, db=%s)", *addr, *staticDir, *maxRooms, *mapName, *dbPath)
 	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Fatal(err)
 	}
@@ -121,4 +147,31 @@ func staticHandler(dir string) http.Handler {
 		}
 		files.ServeHTTP(w, r)
 	})
+}
+
+func recordMatches(ch <-chan game.MatchResult, st *store.Store) {
+	for result := range ch {
+		in := store.MatchInput{
+			ID:        result.ID,
+			RoomID:    result.RoomID,
+			StartedAt: result.StartedAt,
+			EndedAt:   result.EndedAt,
+			Score:     result.Score,
+			Winner:    result.Winner,
+		}
+		for _, p := range result.Players {
+			in.Players = append(in.Players, store.MatchPlayer{
+				ProfileID: p.ProfileID,
+				Team:      p.Team,
+				Kills:     p.Kills,
+				Deaths:    p.Deaths,
+				Assists:   p.Assists,
+				Damage:    p.Damage,
+				Headshots: p.Headshots,
+			})
+		}
+		if err := st.RecordMatch(in); err != nil {
+			log.Printf("killa: record match %s: %v", result.ID, err)
+		}
+	}
 }

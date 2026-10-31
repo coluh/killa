@@ -6,7 +6,7 @@
 - 客户端：TypeScript + Three.js（几何体 / 线框风格，无写实素材）
 - 服务端：Go，权威模拟
 - 传输：WebSocket + JSON（MVP 阶段，后续升级低延迟方案）
-- 身份：游客 ID，暂不做账号系统
+- 身份：游客档案或用户名 + 密码账号；SQLite 持久化战绩与配装
 
 > 仅借鉴玩法规则，不使用任何 PUBG 的素材、名称或商标。
 
@@ -27,13 +27,14 @@ make dev-server
 make dev-client
 ```
 
-打开 http://localhost:5173 ，点击「进入战场」锁定鼠标即可。
+打开 http://localhost:5173 ，在登录框直接点「进入」（留空用户名即为游客），
+再点「进入战场」锁定鼠标即可。首次启动会在 `server/killa.db` 建库。
 
 生产构建（单进程同时提供页面和 WebSocket）：
 
 ```bash
 make build
-./server/killa -addr :8080 -static ./client/dist
+./server/killa -addr :8080 -static ./client/dist -db ./killa.db
 # 打开 http://localhost:8080
 ```
 
@@ -52,6 +53,7 @@ make build
 | 右键 | 开镜（ADS） |
 | R | 换弹 |
 | B | 配装（下次复活生效） |
+| P | 打开档案 |
 | Esc | 释放鼠标 |
 
 本地双人验收：一个窗口正常进入对局，另一个窗口打开 `http://localhost:5173/?spectate=1`
@@ -77,8 +79,10 @@ server/           Go 权威服务器
   cmd/killa/      入口
   internal/game/  房间、玩家、移动与碰撞
   internal/transport/ WebSocket 接入
+  internal/account/   登录、会话与档案 API
+  internal/store/     SQLite 档案/战绩
   internal/protocol/  消息定义
-docs/             规则、架构、协议、路线图
+docs/             规则、架构、协议、账号、路线图
 ```
 
 ## 当前状态
@@ -95,7 +99,9 @@ docs/             规则、架构、协议、路线图
 - [x] 灵敏度/音量/配装本地持久化；断线自动重连（最多 5 次）；`/status` 运维接口
 - [x] ADS 红点镜、命中方块粒子、参考 myold/tdm 第一层重制的更大仓库图
 - [x] PUBG 数值同步：M416/UZI 伤害、2 级甲 40%、脱战回血；机器人进一步降智
+- [x] 账号系统：游客/用户名密码、HttpOnly 会话、SQLite 战绩与配装、档案页
+  （接口与数据表见 [docs/account.md](docs/account.md)）
 - [x] 部署产物：Docker + Caddy + 压测工具 + 部署文档
-- [ ] 部署到实际 VPS（需要域名、备案与服务器访问）
+- [x] 部署到 manyblocks.online（ICP 备案 + Docker/Caddy/HTTPS）
 
 详见 [docs/roadmap.md](docs/roadmap.md)。

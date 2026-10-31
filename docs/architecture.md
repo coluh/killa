@@ -45,6 +45,9 @@ Go 进程
   吸收并消耗耐久，复活重置。
 - **垂直碰撞**：箱子可站上去；水平碰撞按脚底高度过滤，支撑面取脚下最高箱顶。
   服务端与客户端使用同一算法，快速下落时用“下落前高度”判定落点避免穿模。
+- **账号与持久化**：匿名档案/用户名密码登录，HttpOnly 会话 cookie 鉴权 WS；
+  SQLite 保存档案、累计战绩与每场记录。房间结束时异步投递写入队列，不阻塞 tick。
+  接口与数据表见 `docs/account.md`。
 - **表现**：Three.js 几何/描边风格、程序化 WebAudio 音效、出生点光环与倒计时 HUD。
 - **机器人**：与真人共用同一套玩家状态与命中管线，在房间 tick 内运行。用 1m
   网格 A* 绕开箱子，视线检测后停下瞄准射击；人数不足时自动补位，真人加入时
@@ -63,7 +66,8 @@ M1 的已知简化：
 - WebSocket Origin 白名单；全局连接数上限 256、单连接 400 消息/秒限流、
   消息大小与房间人数受限。
 - 射击上线后：命中判定、射速、弹药、后坐力全部服务端计算，客户端只上报「开火意图」。
-- 上线前补充：速率限制、连接鉴权（游客 token）、日志与异常检测。
+- 连接鉴权：HTTP 会话 cookie 验证后才允许 WS 加入；昵称/配装来自服务端档案。
+- 上线前补充：异常检测、账号封禁工具、审计日志。
 
 ## 目录职责
 
@@ -72,6 +76,8 @@ M1 的已知简化：
 | `server/internal/protocol` | 双端共享的消息结构（JSON） |
 | `server/internal/game` | 世界/碰撞、移动模拟、房间循环、玩家状态 |
 | `server/internal/transport` | WebSocket 连接生命周期、读写泵、Origin 校验 |
+| `server/internal/account` | 注册/登录、会话 cookie、档案 API |
+| `server/internal/store` | SQLite 档案、会话、战绩读写 |
 | `server/cmd/killa` | 配置、路由、静态资源、优雅退出 |
 | `client/src` | 渲染、输入、网络、预测/插值、HUD |
 
@@ -81,5 +87,6 @@ M1 的已知简化：
 - `docker-compose.yml` 启动 app 与 Caddy；Caddy 自动申请证书并反代 `wss://`，
   同时负责压缩、静态缓存与安全响应头。
 - 国内 VPS 需完成 ICP 备案后才能使用 80/443；部署与排障见 `docs/deploy.md`。
+- 数据：SQLite 文件挂 `killa_data` volume；备份/恢复见 `docs/deploy.md`。
 - 观测：`/healthz`、加入/离开/开局/结算日志、Docker healthcheck 与日志轮转。
 - 压测：`server/cmd/loadtest`（8 客户端，快照频率与 RTT）。

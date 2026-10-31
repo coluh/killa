@@ -13,6 +13,10 @@ services:
       - "/app/client/dist"
       - "-rooms"
       - "${KILLA_ROOMS:-16}"
+      - "-db"
+      - "/data/killa.db"
+    volumes:
+      - killa_data:/data
     expose:
       - "8080"
     healthcheck:
@@ -50,5 +54,6 @@ services:
         max-file: "3"
 
 volumes:
+  killa_data:
   caddy_data:
   caddy_config:

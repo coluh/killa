@@ -20,8 +20,9 @@ RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/killa .
 
 # ---------- runtime ----------
 FROM alpine:3.20
-RUN adduser -D -H -u 10001 killa
+RUN adduser -D -H -u 10001 killa && mkdir -p /data && chown killa:killa /data
 WORKDIR /app
+ENV KILLA_DB=/data/killa.db
 COPY --from=server /out/killa /app/killa
 COPY --from=client /src/client/dist /app/client/dist
 USER killa

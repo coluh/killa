@@ -12,6 +12,7 @@ import (
 
 	"killa/server/internal/game"
 	"killa/server/internal/protocol"
+	"killa/server/internal/store"
 )
 
 type singleRoom struct {
@@ -23,6 +24,22 @@ func (s singleRoom) Join(peer game.Peer, name string, weapon ...string) (*game.R
 		return nil, err
 	}
 	return s.room, nil
+}
+
+func (s singleRoom) JoinProfile(peer game.Peer, name, weapon, profileID string) (*game.Room, error) {
+	if err := s.room.JoinProfile(peer, name, weapon, profileID); err != nil {
+		return nil, err
+	}
+	return s.room, nil
+}
+
+type stubResolver struct{}
+
+func (stubResolver) Resolve(token string) (*store.Profile, error) {
+	if token == "good" {
+		return &store.Profile{ID: "profile-1", DisplayName: "Alice", Loadout: "smg"}, nil
+	}
+	return nil, store.ErrNotFound
 }
 
 func newTestServer(t *testing.T) (string, func()) {
@@ -187,4 +204,60 @@ func TestRateLimitClosesConnection(t *testing.T) {
 		}
 	}
 	t.Fatal("expected a rate limit error")
+}
+
+func TestJoinRequiresSession(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	room := game.NewRoom("auth-room", game.NewWarehouse())
+	go room.Run(ctx)
+
+	api := NewServer(singleRoom{room: room}, nil)
+	api.SetSessionResolver(stubResolver{})
+	ts := httptest.NewServer(http.HandlerFunc(api.HandleWS))
+	defer ts.Close()
+	url := "ws" + strings.TrimPrefix(ts.URL, "http") + "/ws"
+
+	// No cookie: the join is rejected before reaching the room.
+	anon, _, err := websocket.DefaultDialer.Dial(url, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := anon.WriteJSON(protocol.Join{Type: "join", Name: "nobody"}); err != nil {
+		t.Fatal(err)
+	}
+	rejection := readJSON[protocol.Error](t, anon, 3*time.Second)
+	if rejection.Type != "error" || !strings.Contains(rejection.Message, "登录") {
+		t.Fatalf("rejection = %+v", rejection)
+	}
+	_ = anon.Close()
+
+	// With a session cookie the profile name/loadout replace client-supplied values.
+	header := http.Header{}
+	header.Set("Cookie", "killa_session=good")
+	authed, _, err := websocket.DefaultDialer.Dial(url, header)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer authed.Close()
+	if err := authed.WriteJSON(protocol.Join{Type: "join", Name: "spoofed", Weapon: "ar"}); err != nil {
+		t.Fatal(err)
+	}
+	welcome := readJSON[protocol.Welcome](t, authed, 3*time.Second)
+	if welcome.Type != "welcome" {
+		t.Fatalf("welcome = %+v", welcome)
+	}
+	snap := readJSON[protocol.Snapshot](t, authed, 3*time.Second)
+	var found bool
+	for _, p := range snap.Players {
+		if p.ID == welcome.PlayerID {
+			found = true
+			if p.Name != "Alice" || p.Weapon != "smg" {
+				t.Fatalf("profile not applied: %+v", p)
+			}
+		}
+	}
+	if !found {
+		t.Fatal("self not found in snapshot")
+	}
 }

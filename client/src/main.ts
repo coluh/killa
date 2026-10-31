@@ -5,6 +5,41 @@ import { Input } from './input'
 import { SceneView } from './scene'
 import { Sound } from './audio'
 
+interface ProfileStats {
+  kills: number
+  deaths: number
+  assists: number
+  damage: number
+  headshots: number
+  matches: number
+  wins: number
+}
+
+interface Profile {
+  id: string
+  username: string
+  displayName: string
+  isGuest: boolean
+  createdAt: number
+  loadout: string
+  settings: { sens?: number; vol?: number }
+  stats: ProfileStats
+}
+
+interface MatchRow {
+  id: string
+  roomId: string
+  endedAt: string
+  score: [number, number]
+  winner: number
+  team: number
+  kills: number
+  deaths: number
+  assists: number
+  damage: number
+  headshots: number
+}
+
 const app = document.getElementById('app') as HTMLDivElement
 const overlay = document.getElementById('overlay') as HTMLDivElement
 const statusEl = document.getElementById('status') as HTMLParagraphElement
@@ -52,6 +87,30 @@ const sensInput = document.getElementById('sens') as HTMLInputElement
 const sensValue = document.getElementById('sensval') as HTMLOutputElement
 const volInput = document.getElementById('vol') as HTMLInputElement
 const volValue = document.getElementById('volval') as HTMLOutputElement
+const accountBtn = document.getElementById('accountbtn') as HTMLButtonElement
+const loginEl = document.getElementById('login') as HTMLDivElement
+const loginForm = document.getElementById('loginform') as HTMLFormElement
+const loginName = document.getElementById('loginname') as HTMLInputElement
+const loginPass = document.getElementById('loginpass') as HTMLInputElement
+const loginBtn = document.getElementById('loginbtn') as HTMLButtonElement
+const loginError = document.getElementById('loginerror') as HTMLParagraphElement
+const profileEl = document.getElementById('profile') as HTMLDivElement
+const profileClose = document.getElementById('profileclose') as HTMLButtonElement
+const profileName = document.getElementById('profilename') as HTMLHeadingElement
+const profileTag = document.getElementById('profiletag') as HTMLParagraphElement
+const profileStats = document.getElementById('profilestats') as HTMLDivElement
+const profileMatches = document.getElementById('profilematches') as HTMLDivElement
+const guestForm = document.getElementById('guestform') as HTMLDivElement
+const guestName = document.getElementById('guestname') as HTMLInputElement
+const guestPass = document.getElementById('guestpass') as HTMLInputElement
+const guestBtn = document.getElementById('guestbtn') as HTMLButtonElement
+const passForm = document.getElementById('passform') as HTMLDivElement
+const curPass = document.getElementById('curpass') as HTMLInputElement
+const newPass = document.getElementById('newpass') as HTMLInputElement
+const passBtn = document.getElementById('passbtn') as HTMLButtonElement
+const profileMsg = document.getElementById('profilemsg') as HTMLParagraphElement
+const logoutBtn = document.getElementById('logoutbtn') as HTMLButtonElement
+const deleteBtn = document.getElementById('deletebtn') as HTMLButtonElement
 
 const net = new Net()
 const input = new Input()
@@ -83,6 +142,10 @@ let wasReloading = false
 let reconnecting = false
 let reconnectAttempt = 0
 let reconnectTimer: number | null = null
+let profile: Profile | null = null
+let authBlocked = false
+let profileOpen = false
+let syncTimer: number | null = null
 
 const weapons = new Map<string, WeaponInfo>()
 let selectedLoadout = 'ar'
@@ -144,8 +207,316 @@ const savedSensitivity = loadNumber('killa.sens', 1)
 const savedVolume = loadNumber('killa.vol', 0.8)
 applySensitivity(savedSensitivity)
 applyVolume(savedVolume)
-sensInput.addEventListener('input', () => applySensitivity(Number(sensInput.value)))
-volInput.addEventListener('input', () => applyVolume(Number(volInput.value)))
+sensInput.addEventListener('input', () => {
+  applySensitivity(Number(sensInput.value))
+  queueProfileSync()
+})
+volInput.addEventListener('input', () => {
+  applyVolume(Number(volInput.value))
+  queueProfileSync()
+})
+
+class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message)
+  }
+}
+
+async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
+  const headers = new Headers(init.headers)
+  if (init.body) headers.set('Content-Type', 'application/json')
+  const res = await fetch(path, { credentials: 'same-origin', ...init, headers })
+  const text = await res.text()
+  let data: any = null
+  if (text) {
+    try {
+      data = JSON.parse(text)
+    } catch {
+      data = null
+    }
+  }
+  if (!res.ok) {
+    throw new ApiError(data?.error ?? `请求失败（${res.status}）`, res.status)
+  }
+  return data as T
+}
+
+function setProfile(next: Profile): void {
+  if (syncTimer !== null) {
+    window.clearTimeout(syncTimer)
+    syncTimer = null
+  }
+  profile = next
+  authBlocked = false
+  accountBtn.classList.remove('hidden')
+  loginEl.classList.add('hidden')
+  if (typeof next.settings?.sens === 'number') applySensitivity(next.settings.sens)
+  if (typeof next.settings?.vol === 'number') applyVolume(next.settings.vol)
+  if (next.loadout === 'ar' || next.loadout === 'smg') {
+    selectedLoadout = next.loadout
+  }
+}
+
+function showLogin(message = ''): void {
+  if (syncTimer !== null) {
+    window.clearTimeout(syncTimer)
+    syncTimer = null
+  }
+  authBlocked = true
+  profile = null
+  profileOpen = false
+  accountBtn.classList.add('hidden')
+  profileEl.classList.add('hidden')
+  loginEl.classList.remove('hidden')
+  loginError.textContent = message
+  loginBtn.disabled = false
+  loginBtn.textContent = '进入'
+  if (document.pointerLockElement) document.exitPointerLock()
+  net.close()
+  window.setTimeout(() => loginName.focus(), 50)
+}
+
+function connectGame(): void {
+  authBlocked = false
+  loginEl.classList.add('hidden')
+  showOverlay('正在连接服务器…', '请稍候', true)
+  net.connect(profile?.loadout || selectedLoadout)
+}
+
+async function bootstrap(): Promise<void> {
+  try {
+    const data = await api<{ profile: Profile }>('/api/session')
+    setProfile(data.profile)
+    connectGame()
+  } catch (err) {
+    const message = err instanceof ApiError && err.status === 401 ? '' : '无法连接服务器，请稍后刷新重试'
+    showLogin(message)
+  }
+}
+
+loginForm.addEventListener('submit', async (event) => {
+  event.preventDefault()
+  loginBtn.disabled = true
+  loginBtn.textContent = '连接中…'
+  loginError.textContent = ''
+  try {
+    const data = await api<{ profile: Profile }>('/api/auth', {
+      method: 'POST',
+      body: JSON.stringify({
+        username: loginName.value.trim(),
+        password: loginPass.value,
+      }),
+    })
+    loginPass.value = ''
+    setProfile(data.profile)
+    connectGame()
+  } catch (err) {
+    loginError.textContent = err instanceof Error ? err.message : '进入失败'
+    loginBtn.disabled = false
+    loginBtn.textContent = '进入'
+  }
+})
+
+function queueProfileSync(): void {
+  if (!profile) return
+  if (syncTimer !== null) window.clearTimeout(syncTimer)
+  syncTimer = window.setTimeout(() => {
+    syncTimer = null
+    void pushProfile()
+  }, 500)
+}
+
+async function pushProfile(): Promise<void> {
+  if (!profile) return
+  try {
+    const data = await api<{ profile: Profile }>('/api/profile', {
+      method: 'POST',
+      body: JSON.stringify({
+        settings: {
+          sens: Number(sensInput.value),
+          vol: Number(volInput.value),
+        },
+        loadout: selectedLoadout,
+      }),
+    })
+    profile = data.profile
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 401) showLogin('登录已失效，请重新进入')
+  }
+}
+
+function stat(label: string, value: number | string): HTMLDivElement {
+  const box = document.createElement('div')
+  box.className = 'pstat'
+  const b = document.createElement('b')
+  b.textContent = String(value)
+  const span = document.createElement('span')
+  span.textContent = label
+  box.append(b, span)
+  return box
+}
+
+function renderProfile(): void {
+  if (!profile) return
+  profileName.textContent = profile.displayName
+  profileTag.textContent = profile.isGuest
+    ? '游客 · 本机会话免登录；绑定账号后可跨设备'
+    : `账号 · ${profile.username}`
+
+  const s = profile.stats
+  const rate = s.matches > 0 ? `${Math.round((s.wins / s.matches) * 100)}%` : '—'
+  profileStats.replaceChildren(
+    stat('击杀', s.kills),
+    stat('死亡', s.deaths),
+    stat('助攻', s.assists),
+    stat('场次', s.matches),
+    stat('胜率', rate),
+    stat('伤害', s.damage),
+  )
+
+  guestForm.classList.toggle('hidden', !profile.isGuest)
+  passForm.classList.toggle('hidden', profile.isGuest)
+  profileMsg.textContent = ''
+}
+
+function renderMatches(rows: MatchRow[]): void {
+  profileMatches.replaceChildren()
+  if (rows.length === 0) {
+    const empty = document.createElement('p')
+    empty.className = 'sub'
+    empty.textContent = '还没有完成的对局'
+    profileMatches.append(empty)
+    return
+  }
+  for (const row of rows) {
+    const el = document.createElement('div')
+    const outcome = row.winner === 2 ? '平' : row.winner === row.team ? '胜' : '负'
+    el.className = `match-row ${outcome === '胜' ? 'win' : outcome === '负' ? 'loss' : ''}`
+    const when = document.createElement('span')
+    const date = new Date(row.endedAt)
+    when.textContent = `${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+    const score = document.createElement('b')
+    score.textContent = `${row.score[0]}:${row.score[1]} ${outcome}`
+    const line = document.createElement('span')
+    line.textContent = `${row.kills}/${row.deaths}/${row.assists}`
+    el.append(when, score, line)
+    profileMatches.append(el)
+  }
+}
+
+async function openProfile(): Promise<void> {
+  if (!profile) return
+  profileOpen = true
+  if (document.pointerLockElement) document.exitPointerLock()
+  profileEl.classList.remove('hidden')
+  renderProfile()
+  profileMatches.textContent = '加载中…'
+  try {
+    const data = await api<{ profile: Profile; recent: MatchRow[] }>('/api/me')
+    profile = data.profile
+    renderProfile()
+    renderMatches(data.recent ?? [])
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 401) {
+      showLogin('登录已失效，请重新进入')
+      return
+    }
+    profileMatches.textContent = '读取战绩失败'
+  }
+}
+
+function closeProfile(): void {
+  profileOpen = false
+  profileEl.classList.add('hidden')
+  if (started && initialized && !reconnecting && !spectate) {
+    showOverlay('已暂停', '继续战斗')
+  }
+}
+
+accountBtn.addEventListener('click', () => void openProfile())
+profileClose.addEventListener('click', closeProfile)
+
+guestBtn.addEventListener('click', async () => {
+  guestBtn.disabled = true
+  profileMsg.textContent = ''
+  try {
+    const data = await api<{ profile: Profile }>('/api/account/upgrade', {
+      method: 'POST',
+      body: JSON.stringify({ username: guestName.value.trim(), password: guestPass.value }),
+    })
+    profile = data.profile
+    guestPass.value = ''
+    renderProfile()
+    profileMsg.style.color = 'var(--cyan)'
+    profileMsg.textContent = '绑定成功，现在可以在其他设备登录'
+  } catch (err) {
+    profileMsg.style.color = '#ff7b72'
+    profileMsg.textContent = err instanceof Error ? err.message : '绑定失败'
+  } finally {
+    guestBtn.disabled = false
+  }
+})
+
+passBtn.addEventListener('click', async () => {
+  passBtn.disabled = true
+  profileMsg.textContent = ''
+  try {
+    await api('/api/account/password', {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword: curPass.value, newPassword: newPass.value }),
+    })
+    curPass.value = ''
+    newPass.value = ''
+    profileMsg.style.color = 'var(--cyan)'
+    profileMsg.textContent = '密码已修改，其他设备已退出'
+  } catch (err) {
+    profileMsg.style.color = '#ff7b72'
+    profileMsg.textContent = err instanceof Error ? err.message : '修改失败'
+  } finally {
+    passBtn.disabled = false
+  }
+})
+
+logoutBtn.addEventListener('click', async () => {
+  try {
+    await api('/api/auth/logout', { method: 'POST' })
+  } catch {
+    // ignore; clear local state anyway
+  }
+  showLogin('已退出登录')
+})
+
+deleteBtn.addEventListener('click', async () => {
+  if (!profile) return
+  if (!window.confirm('确定删除账号和所有战绩？此操作不可恢复。')) return
+  deleteBtn.disabled = true
+  try {
+    await api('/api/account', {
+      method: 'DELETE',
+      body: JSON.stringify(profile.isGuest ? {} : { password: curPass.value }),
+    })
+    showLogin('账号已删除')
+  } catch (err) {
+    profileMsg.style.color = '#ff7b72'
+    profileMsg.textContent = err instanceof Error ? err.message : '删除失败'
+  } finally {
+    deleteBtn.disabled = false
+  }
+})
+
+document.addEventListener('keydown', (event) => {
+  if (event.code === 'Escape' && profileOpen) {
+    event.preventDefault()
+    closeProfile()
+    return
+  }
+  if (event.code !== 'KeyP' || !initialized || profileOpen) return
+  event.preventDefault()
+  void openProfile()
+})
 
 function requestLock(): void {
   if (!sceneView || !initialized) return
@@ -233,6 +604,7 @@ function renderLoadoutCards(): void {
       card.classList.add('selected')
       saveString('killa.loadout', info.id)
       net.send({ type: 'loadout', weapon: info.id })
+      queueProfileSync()
       closeLoadout(true)
     })
     loadoutCards.append(card)
@@ -426,7 +798,7 @@ net.onWelcome = (welcome: Welcome) => {
   for (const info of welcome.weapons) {
     weapons.set(info.id, info)
   }
-  const savedLoadout = loadString('killa.loadout', 'ar')
+  const savedLoadout = profile?.loadout || loadString('killa.loadout', 'ar')
   selectedLoadout = weapons.has(savedLoadout) ? savedLoadout : (welcome.weapons[0]?.id ?? 'ar')
   myWeapon = weapons.get(selectedLoadout) ?? null
   renderLoadoutCards()
@@ -595,6 +967,10 @@ net.onKill = (kill: Kill) => {
 }
 
 net.onServerError = (err) => {
+  if (err.message.includes('登录')) {
+    showLogin('登录已失效，请重新进入')
+    return
+  }
   reconnecting = true
   showOverlay(`无法加入：${err.message}`, '重新连接')
   playButton.onclick = () => {
@@ -606,6 +982,7 @@ net.onServerError = (err) => {
 }
 
 net.onClose = () => {
+  if (authBlocked) return
   reconnecting = true
   if (document.pointerLockElement) document.exitPointerLock()
   scheduleReconnect()
@@ -747,4 +1124,4 @@ if (new URLSearchParams(location.search).has('debug')) {
 }
 
 requestAnimationFrame(frame)
-net.connect(loadString('killa.loadout', 'ar'))
+void bootstrap()

@@ -21,6 +21,7 @@ type Manager struct {
 	autoBots      bool
 	matchDuration time.Duration
 	scoreLimit    int
+	matchRecorder func(MatchResult)
 }
 
 func NewManager(ctx context.Context, world *World, maxRooms int) *Manager {
@@ -58,6 +59,11 @@ func (m *Manager) SetRules(duration time.Duration, scoreLimit int) {
 // Join places the peer in the fullest room that still has human capacity,
 // creating a room when needed. ErrRoomFull means the whole process is full.
 func (m *Manager) Join(peer Peer, name string, weapon ...string) (*Room, error) {
+	return m.JoinProfile(peer, name, firstOrEmpty(weapon...), "")
+}
+
+// JoinProfile places a session-backed player into a room.
+func (m *Manager) JoinProfile(peer Peer, name, weapon, profileID string) (*Room, error) {
 	for attempt := 0; attempt < 6; attempt++ {
 		m.mu.Lock()
 		room := m.pickRoomLocked()
@@ -67,7 +73,7 @@ func (m *Manager) Join(peer Peer, name string, weapon ...string) (*Room, error) 
 			return nil, ErrRoomFull
 		}
 
-		err := room.Join(peer, name, weapon...)
+		err := room.JoinProfile(peer, name, weapon, profileID)
 		if err == nil {
 			return room, nil
 		}
@@ -76,6 +82,20 @@ func (m *Manager) Join(peer Peer, name string, weapon ...string) (*Room, error) 
 		}
 	}
 	return nil, ErrRoomFull
+}
+
+// SetMatchRecorder receives finished matches from all rooms.
+func (m *Manager) SetMatchRecorder(fn func(MatchResult)) {
+	m.mu.Lock()
+	m.matchRecorder = fn
+	rooms := make([]*Room, 0, len(m.rooms))
+	for _, room := range m.rooms {
+		rooms = append(rooms, room)
+	}
+	m.mu.Unlock()
+	for _, room := range rooms {
+		room.SetMatchRecorder(fn)
+	}
 }
 
 func (m *Manager) pickRoomLocked() *Room {
@@ -117,6 +137,7 @@ func (m *Manager) createRoomLocked() *Room {
 	room := NewRoom(fmt.Sprintf("arena-%d", m.seq), m.world)
 	room.SetAutoBots(m.autoBots)
 	room.SetRules(m.matchDuration, m.scoreLimit)
+	room.SetMatchRecorder(m.matchRecorder)
 	m.rooms[room.ID] = room
 	go room.Run(m.ctx)
 	return room

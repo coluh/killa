@@ -378,3 +378,31 @@ func TestInvincibleAfterMatchEnd(t *testing.T) {
 		t.Fatal("damage should work again after the new match starts")
 	}
 }
+
+func TestMatchResultIncludesProfiles(t *testing.T) {
+	room, p1, p2 := newCombatRoom()
+	p1.ProfileID = "profile-a"
+	p2.ProfileID = "profile-b"
+	p1.Kills = 7
+	p1.Damage = 640
+	p1.Headshots = 3
+	p2.Deaths = 7
+	room.score = [2]int{12, 4}
+	room.winner = 0
+
+	var got MatchResult
+	room.SetMatchRecorder(func(result MatchResult) { got = result })
+	room.finishMatch(time.Now())
+
+	if got.RoomID != room.ID || got.Score != [2]int{12, 4} || got.Winner != 0 {
+		t.Fatalf("result = %+v", got)
+	}
+	if len(got.Players) != 2 {
+		t.Fatalf("players = %d, want 2", len(got.Players))
+	}
+	for _, p := range got.Players {
+		if p.ProfileID == "profile-a" && (p.Kills != 7 || p.Damage != 640 || p.Headshots != 3) {
+			t.Fatalf("profile-a = %+v", p)
+		}
+	}
+}

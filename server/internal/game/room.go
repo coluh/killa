@@ -30,18 +30,21 @@ type Peer interface {
 
 // Player is the authoritative state of one participant.
 type Player struct {
-	ID      string
-	Name    string
-	Team    int
-	State   State
-	HP      int
-	Alive   bool
-	Kills   int
-	Deaths  int
-	LastSeq uint32
-	Peer    Peer
-	IsBot   bool
-	Brain   *botBrain
+	ID        string
+	ProfileID string
+	Name      string
+	Team      int
+	State     State
+	HP        int
+	Alive     bool
+	Kills     int
+	Deaths    int
+	Damage    int
+	Headshots int
+	LastSeq   uint32
+	Peer      Peer
+	IsBot     bool
+	Brain     *botBrain
 
 	Loadout     string
 	Weapon      string
@@ -88,6 +91,8 @@ type Room struct {
 	matchDuration time.Duration
 	scoreLimit    int
 	invincible    bool
+	startedAt     time.Time
+	matchRecorder func(MatchResult)
 
 	humans atomic.Int32
 	total  atomic.Int32
@@ -99,10 +104,11 @@ type Room struct {
 }
 
 type joinReq struct {
-	peer   Peer
-	name   string
-	weapon string
-	resp   chan error
+	peer      Peer
+	name      string
+	weapon    string
+	profileID string
+	resp      chan error
 }
 
 type leaveReq struct{ peer Peer }
@@ -209,6 +215,13 @@ func (r *Room) handle(msg any) {
 	}
 }
 
+func firstOrEmpty(values ...string) string {
+	if len(values) > 0 {
+		return values[0]
+	}
+	return ""
+}
+
 func (r *Room) join(m joinReq) {
 	team := r.pickTeam()
 	if r.teamSize(team) >= TeamSize {
@@ -236,15 +249,16 @@ func (r *Room) join(m joinReq) {
 
 	spawn := r.spawnFor(team, r.teamSize(team))
 	p := &Player{
-		ID:      newID(),
-		Name:    sanitizeName(m.name),
-		Team:    team,
-		HP:      MaxHealth,
-		Alive:   true,
-		Peer:    m.peer,
-		State:   State{X: spawn.X, Y: 0, Z: spawn.Z, OnGround: true, Yaw: spawn.Yaw},
-		History: make([]PosSample, 0, 32),
-		Loadout: loadout,
+		ID:        newID(),
+		ProfileID: m.profileID,
+		Name:      sanitizeName(m.name),
+		Team:      team,
+		HP:        MaxHealth,
+		Alive:     true,
+		Peer:      m.peer,
+		State:     State{X: spawn.X, Y: 0, Z: spawn.Z, OnGround: true, Yaw: spawn.Yaw},
+		History:   make([]PosSample, 0, 32),
+		Loadout:   loadout,
 	}
 	r.equip(p)
 	r.players[p.ID] = p
@@ -432,12 +446,13 @@ func (r *Room) spawnFor(team, index int) protocol.Spawn {
 
 // Join enqueues a join request and waits for the room to accept it.
 func (r *Room) Join(peer Peer, name string, weapon ...string) error {
+	return r.JoinProfile(peer, name, firstOrEmpty(weapon...), "")
+}
+
+// JoinProfile joins with a persistent account profile attached.
+func (r *Room) JoinProfile(peer Peer, name, weapon, profileID string) error {
 	resp := make(chan error, 1)
-	chosen := ""
-	if len(weapon) > 0 {
-		chosen = weapon[0]
-	}
-	req := joinReq{peer: peer, name: name, weapon: chosen, resp: resp}
+	req := joinReq{peer: peer, name: name, weapon: weapon, profileID: profileID, resp: resp}
 
 	select {
 	case r.inbox <- req:

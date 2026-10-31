@@ -79,12 +79,24 @@ curl -fsS https://<域名>/healthz
 
 ## 6. 数据与备份
 
-当前版本没有数据库，战绩只在内存中；重启即重置。需要备份的只有：
+账号、会话、战绩在 `/data/killa.db`（Docker volume `killa_killa_data`）。需要备份：
 
+- `killa_data` 卷（SQLite 数据库）；
 - `caddy_data` 卷（TLS 证书，丢失后会自动重新签发）；
 - `.env` 与代码仓库。
 
-后续加入账号/战绩时再接 Postgres 并补充备份策略。
+备份前先停 app，避免复制到写入中的 WAL：
+
+```bash
+docker compose stop app
+mkdir -p backups
+docker run --rm -v killa_killa_data:/data -v "$PWD/backups":/backup alpine \
+  sh -c 'cp /data/killa.db /backup/killa-$(date +%F-%H%M).db'
+docker compose start app
+```
+
+恢复：停 app，把备份文件复制回 volume 的 `/data/killa.db`，再启动。
+SQLite 单文件适用于当前单进程 <100 CCU；多实例部署前需换 Postgres。
 
 ## 7. 压测
 
@@ -104,7 +116,7 @@ go run ./cmd/loadtest -url wss://manyblocks.online/ws -clients 8 -seconds 20
 - 单进程多房间：每房最多 8 人，容量 = `KILLA_ROOMS × 8`，默认 16 房（128 座）。
 - 匹配策略：优先加入人最多的未满房间，满 8 人后自动开新房；空房保留复用。
 - 同时在线目标 < 100；更大规模需要拆分进程/匹配服与共享状态。
-- 无账号、无持久化；游客 ID 仅存在于当前会话。
+- 账号/战绩存于 SQLite（`killa_data` volume）；游客档案与用户名密码账号均持久化。
 - 反作弊为服务端权威 + 基础校验，尚未接入行为检测。
 - 机器人会占满空位；真人加入时自动让位。
 
@@ -126,5 +138,7 @@ go run ./cmd/loadtest -url wss://manyblocks.online/ws -clients 8 -seconds 20
 - [x] 连接数上限（256）与单连接消息限流（400/s）
 - [ ] 定期 `apt upgrade` 与镜像更新
 - [x] 日志轮转已开启（compose 中 10MB × 3）
+- [x] 账号密码 Argon2id 哈希；会话 cookie HttpOnly/SameSite=Lax
+- [x] 登录/注册限流与 Origin 校验
 - [x] 隐私说明/用户协议页面模板（`/privacy.html`、`/terms.html`）
 - [ ] 补充运营主体与联系方式，完成 ICP 备案与合规审查
