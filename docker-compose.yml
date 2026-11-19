@@ -30,30 +30,15 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    networks:
+      web:
+        aliases:
+          - killa
 
-  caddy:
-    image: caddy:2-alpine
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
-    environment:
-      KILLA_DOMAIN: ${KILLA_DOMAIN:?set KILLA_DOMAIN in .env}
-    volumes:
-      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
-    depends_on:
-      app:
-        condition: service_healthy
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "3"
 
 volumes:
   killa_data:
-  caddy_data:
-  caddy_config:
+
+networks:
+  web:
+    external: true
